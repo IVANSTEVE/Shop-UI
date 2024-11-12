@@ -28,13 +28,13 @@
   color: #61dafb;
 }
 
-.background {
+/*.background {
   background-image: url('/path/to/your/image.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  min-height: 100vh; /* Assure que l'image couvre toute la hauteur */
-}
+  min-height: 100vh; /* Assure que l'image couvre toute la hauteur 
+}*/
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
