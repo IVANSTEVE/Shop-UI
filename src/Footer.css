@@ -1,0 +1,37 @@
+.footer-custom {
+    background-color: #333;
+    color: #ddd;
+    padding: 10px 0; /* Ajustez pour réduire la hauteur */
+}
+
+.footer-custom h5 {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.footer-custom p,
+.footer-custom .footer-link,
+.footer-custom .small {
+    font-size: 14px;
+    margin-bottom: 5px; /* Limitez l'espacement vertical */
+}
+
+.footer-link {
+    color: #bbb;
+    text-decoration: none;
+}
+
+.footer-link:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.footer-icon {
+    color: #bbb;
+    font-size: 18px; /* Taille réduite des icônes */
+    margin-right: 10px;
+}
+
+.footer-icon:hover {
+    color: #fff;
+}

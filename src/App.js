@@ -3,6 +3,12 @@ import React, { useState } from 'react';
 import { Navbar, Nav, Button, Card,  Container } from "react-bootstrap";
 import './App.css';
 import useSWR from "swr";
+import logo from './images/Logo_t_shirt_bis.png';
+import headerview from './images/Headerview.jpg'; 
+import Footer from './Footer'; 
+import './App.css';
+
+
 //import Footer from './Footer';
 
 // Fonction de récupération des données JSON depuis l'API
@@ -19,22 +25,36 @@ function App() {
 
     return (   
        <div className="background">
-           <h1>Menu de navigation</h1>
-
+           <div
+                style={{
+                    backgroundImage: `url(${headerview})`,
+                    backgroundRepeat: 'repeat-x',
+                    backgroundSize: 'auto',
+                    height: '100px',
+                    width: '100%',
+                }}
+            ></div>
            {/* Navbar avec les catégories comme boutons */}
            <Navbar bg="secondary" variant="dark" expand="lg">
                <Container>
-                   <Navbar.Brand href="#home">T-SHIRT SHOP</Navbar.Brand>
-                   <Navbar.Toggle aria-controls="basic-navbar-nav" />
-                   <Navbar.Collapse id="basic-navbar-nav">
-                       <Nav className="me-auto">
-                           <Button 
-                               variant="outline-light" 
-                               onClick={() => setSelectedCategory(null)}
-                               style={{ marginRight: '10px' }}
+                 <Navbar.Brand href="#home">
+               <img
+              src={logo}
+              alt="Logo"
+              style={{ width: '70px', height: 'auto', marginRight: '10px' }}
+              />
+                   T-SHIRT SHOP
+                 </Navbar.Brand>
+                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
+                 <Navbar.Collapse id="basic-navbar-nav">
+                   <Nav className="me-auto">
+                     <Button 
+                       variant="outline-light" 
+                       onClick={() => setSelectedCategory(null)}
+                       style={{ width: '70px', height: 'auto', marginRight: '10px' }}
                            >
                                HOME
-                           </Button>
+                     </Button>
                            {/* Affiche chaque catégorie comme un bouton dans la navbar */}
                            {categoriesError ? (
                                <Button variant="outline-light" disabled>Échec du chargement</Button>
@@ -81,6 +101,7 @@ function App() {
                     <HomeScreen/>
                 )}
             </div>
+            <Footer />
         </div>
     );
 }
@@ -137,9 +158,9 @@ function CategoryPage({ category, setSelectedProduct }) {
                                 //title={selectedProduct.productName}
                                 style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px' }}
                             />
-                            <Card.Body>
+                           {/*} <Card.Body>
                                 <Button variant="secondary">See Details</Button>
-                             </Card.Body>
+                             </Card.Body>*/}
                         </Card>
                     ))
                 )}
