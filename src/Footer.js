@@ -1,20 +1,16 @@
 import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import '@fortawesome/fontawesome-free/css/all.min.css';
-import './Footer.css'; // Utilisez un fichier CSS dédié pour des styles plus or
+import './Footer.css';
 
 function Footer() {
     return (
         <footer className="footer-custom bg-secondary text-light">
-            <Container fluid className="text-center py-1">
-                <Row className="align-items-center">
+            <Container fluid className="text-center py-3">
+                <Row>
                     <Col md={6}>
                         <h5>T-Shirt Shop</h5>
                         <p>Votre boutique en ligne pour les meilleurs t-shirts !</p>
-                        <p>
-                            <a href="/privacy-policy" className="footer-link">Politique de confidentialité</a> |{' '}
-                            <a href="/terms-of-service" className="footer-link">Conditions d'utilisation</a>
-                        </p>
                     </Col>
                     <Col md={3}>
                         <h5>Liens utiles</h5>
@@ -22,7 +18,6 @@ function Footer() {
                             <li><a href="#home" className="footer-link">Accueil</a></li>
                             <li><a href="#about" className="footer-link">À propos</a></li>
                             <li><a href="#contact" className="footer-link">Contact</a></li>
-                            <li><a href="#faq" className="footer-link">FAQ</a></li>
                         </ul>
                     </Col>
                     <Col md={3}>
@@ -39,11 +34,9 @@ function Footer() {
                             </a>
                         </div>
                     </Col>
-                    <hr style={{ borderColor: '#555' }} />
-                <div className="text-center">
-                    <p style={{ marginBottom: '0' }}>© 2024 T-Shirt Shop. Tous droits réservés.</p>
-                </div>
                 </Row>
+                <hr />
+                <p className="small">© 2024 T-Shirt Shop. Tous droits réservés.</p>
             </Container>
         </footer>
     );
