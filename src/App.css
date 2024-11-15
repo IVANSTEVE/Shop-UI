@@ -88,3 +88,11 @@
   object-fit: cover;
   border-radius: 8px;
 }
+.category-title {
+  font-size: 3em;
+  font-weight: bold;
+  text-align: center;
+  margin: 20px 0;
+}
+
+
