@@ -5,8 +5,8 @@ import './Footer.css';
 
 function Footer() {
     return (
-        <footer className="footer-custom bg-secondary text-light">
-            <Container fluid className="text-center py-3">
+        <footer className="footer-custom" style={{ backgroundColor: '#212529' }}>
+    <Container fluid className="text-center py-3">
                 <Row>
                     <Col md={6}>
                         <h5>T-Shirt Shop</h5>
