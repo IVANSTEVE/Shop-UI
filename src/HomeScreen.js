@@ -1,7 +1,7 @@
 import useSWR from "swr";
 import {Row} from "react-bootstrap";
 import React from "react";
-
+ 
 function HomeScreen({setSelectedProduct, fetcher}) {
     const {data, error} = useSWR('http://localhost:8080/products', fetcher);
 
@@ -13,7 +13,7 @@ function HomeScreen({setSelectedProduct, fetcher}) {
             {/*<p className="futuristic-paragraph">*/}
             {/*    Ce site a été réalisé dans le cadre du cours de Projet d'Intégration. Découvrez notre sélection de*/}
             {/*    t-shirts et explorez les différentes catégories disponibles.*/}
-            {/*    Ce projet utilise React pour le front-end, Spring Boot pour le back-end, et MySQL pour la gestion de*/}
+            {/*    Ce projet utilise React pour le front-end, Spring Boot pour le back-end, et MySQL pour la gestion de */}
             {/*    données.*/}
             {/*</p>*/}
             {/*<Row className="justify-content-center">*/}
@@ -46,7 +46,7 @@ function HomeScreen({setSelectedProduct, fetcher}) {
                                     src={selectedProduct.imageURL || '/images/placeholder.webp'}
                                     alt={selectedProduct.productName}
                                     title={selectedProduct.productName}
-                                    style={{width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px'}}
+                                    style={{width: '100px', height: '100px', objectFit: 'cover', borderRadius:'8px'}} 
                                 />
                             </div>
                         ))

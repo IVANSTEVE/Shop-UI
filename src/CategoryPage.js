@@ -1,7 +1,7 @@
 import useSWR from "swr";
 import {Card} from "react-bootstrap";
 import React from "react";
-
+ 
 function CategoryPage({category, setSelectedProduct, fetcher, categoryLabels}) {
     const {data, error} = useSWR(`http://localhost:8080/categories/${category}/products`, fetcher);
 
@@ -26,7 +26,7 @@ function CategoryPage({category, setSelectedProduct, fetcher, categoryLabels}) {
                                 src={product.imageURL || '/images/placeholder.webp'}
                                 alt={product.productName}
                                 title={product.productName}
-                                style={{width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', display: 'block', margin: 'auto'}}
+                                style={{width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', display: 'block', margin:'auto'}}
                             />
                             <Card.Body>
                                 <Card.Title>{product.productName}</Card.Title>

@@ -1,14 +1,22 @@
+import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, {useState} from 'react';
-import {Navbar, Nav, Button, Container} from "react-bootstrap";
+import 'bootstrap-icons/font/bootstrap-icons.css';
+import {Navbar, Nav, Button, Container } from "react-bootstrap";
 import './App.css';
 import useSWR from "swr";
 import logo from './Logo_t_shirt_bis.png';
 import headerview from './Headerview.jpg';
 import Footer from './Footer';
+import CartDrawer from './CartDrawer';
+import './Card.css'; // Pour le style du drawer
 import HomeScreen from './HomeScreen';
 import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
+//import CartModal  from './CartModal';
+//import AboutText from './components/AboutText';
+//import Apropos from './components/Apropos';
+//import Faq from './components/Faq';
+
 
 const fetcher = async (url) => {
     const response = await fetch(url);
@@ -17,7 +25,6 @@ const fetcher = async (url) => {
     }
     return response.json();
 };
-
 const categoryLabels = {
     MEN: "Hommes",
     WOMEN: "Femmes",
@@ -29,7 +36,12 @@ function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const {data: categories, error: categoriesError} = useSWR('http://localhost:8080/categories', fetcher);
-
+    const [cart, setCart] = useState([]);
+    const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
+    const toggleCart = () => {
+        setShowCart(!showCart); // Change la visibilité du panier
+      };
+    
     return (
         <div className="background">
             {/* Header avec overlay pour l'image */}
@@ -64,6 +76,7 @@ function App() {
                                 <Button variant="outline-light" disabled>Chargement...</Button>
                             ) : (
                                 categories.map((category) => (
+                              
                                     <Button
                                         key={category}
                                         variant="outline-light"
@@ -78,9 +91,18 @@ function App() {
                                 ))
                             )}
                         </Nav>
+                        <Button
+                          variant="outline-light"
+                          style={{ position: 'relative' }}
+                          onClick={toggleCart} // Appelle toggleCart au clic  {() => console.log("Ouverture du panier")}
+                        >
+                        <i className="bi bi-cart-check" style={{ fontSize: '1.8rem', marginRight: '5px' }}></i>
+                          Panier
+                        </Button>
+              
                     </Navbar.Collapse>
-                </Container>
-            </Navbar>
+       </Container>
+    </Navbar>
 
             {/* Affichage conditionnel des composants selon la sélection */}
             <main className="content">
@@ -92,15 +114,25 @@ function App() {
                         categoryLabels={categoryLabels}
                     />
                 ) : selectedCategory && selectedProduct ? (
-                    <ProductDetails productId={selectedProduct} setSelectedProduct={setSelectedProduct} fetcher={fetcher} />
+                <ProductDetails productId={selectedProduct} setSelectedProduct={setSelectedProduct} fetcher={fetcher} cart={cart}
+                setCart={setCart} showCart= {showCart} setShowCart={setShowCart}/>
                 ) : (
+
+                    /*<ProductList setSelectedProduct={setSelectedProduct} />*/
                     <HomeScreen categories={categories} setSelectedCategory={setSelectedCategory}
-                                setSelectedProduct={setSelectedProduct}
-                                fetcher={fetcher} />
+                                setSelectedProduct={setSelectedProduct} fetcher={fetcher}/>
                 )}
+
             </main>
+
+           <CartDrawer
+                cart={cart}
+                setCart={setCart}
+                showCart={showCart}
+                onHide={() => setShowCart(false)} // Ferme le panier
+            />
             <Footer/>
-        </div>
+          </div>
     );
 }
 
