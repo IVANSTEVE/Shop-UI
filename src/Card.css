@@ -1,76 +1,40 @@
-.drawer {
+.cart-drawer {
     position: fixed;
     top: 0;
-    right: -400px; /* Drawer est initialement caché */
-    width: 900px;
+    right: 0;
+    width: 400px;
     height: 100%;
-    background-color: white;
+    background-color: #fff;
+    border-left: 1px solid #ddd;
     box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-    transition: right 0.3s ease-in-out;
-    z-index: 1050;
-    display: flex;
-    flex-direction: column;
     overflow-y: auto;
+    z-index: 1050;
+    transition: transform 0.3s ease-in-out;
+    transform: translateX(100%); /* Caché par défaut */
 }
 
-.drawer.open {
-    right: 0; /* Quand ouvert, le drawer s’affiche */
+.cart-drawer.show {
+    transform: translateX(0); /* S'affiche lorsqu'il est visible */
 }
 
-.drawer-header {
+.cart-drawer .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
-    background-color: #f8f9fa;
+    padding: 1rem;
     border-bottom: 1px solid #ddd;
-}
-
-.drawer-body {
-    flex: 1;
-    padding: 20px;
-}
-
-.cart-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.cart-item p {
-    margin: 0;
-}
-
-.remove-item {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    cursor: pointer;
-    border-radius: 5px;
-}
-
-.drawer-footer {
-    padding: 10px 20px;
-    border-top: 1px solid #ddd;
     background-color: #f8f9fa;
-    text-align: right;
 }
 
-.close-drawer,
-.close-button {
-    background: none;
-    border: none;
-    font-size: 1.0rem;
-    cursor: pointer;
+.cart-drawer .card-body {
+    padding: 1rem;
 }
 
-.checkout-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-    border-radius: 5px;
+.cart-drawer .table {
+    margin-bottom: 1rem;
+}
+
+.cart-drawer .text-end {
+    padding: 1rem;
+    border-top: 1px solid #ddd;
 }

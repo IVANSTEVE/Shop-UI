@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Table, Button, Form } from 'react-bootstrap';
-import './Card.css'; // Pour le style du 
+import './Card.css'; // Pour le style du panier
 
 function CartDrawer({ cart, setCart, show, onHide }) {
     // Mise à jour de la quantité d'un produit
@@ -30,8 +30,8 @@ function CartDrawer({ cart, setCart, show, onHide }) {
 
 
     return (
-        <Card show={show} onHide={onHide} placement="stard">
-            <Card.Header closeButton>
+        <Card show={show} onHide={onHide} placement="start">
+            <Card.Header>
                 <Card.Title>Votre Panier</Card.Title>
 
 
@@ -46,8 +46,9 @@ function CartDrawer({ cart, setCart, show, onHide }) {
                                     <th>#</th>
                                     <th>Article</th>
                                     <th>Quantité</th>
+                                    <th>Prix unitaire</th>
                                     <th>Total ligne</th>
-                                    <th>Actions</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -74,9 +75,8 @@ function CartDrawer({ cart, setCart, show, onHide }) {
                                                 ))}
                                             </Form.Select>
                                         </td>
-                                        <td>
-                                            {item.quantity * item.price} €
-                                        </td>
+                                        <td>{item.price.toFixed(2)} €</td>
+                                        <td> {(item.quantity * item.price).toFixed(2)} €</td>
                                         <td>
                                             <Button
                                                 variant="danger"
