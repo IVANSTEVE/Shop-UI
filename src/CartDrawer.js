@@ -95,6 +95,14 @@ function CartDrawer({ cart, setCart, show, onHide }) {
                                 Total général : <strong>{calculTotal()} €</strong>
                             </h5>
                         </div>
+                        <div className="d-flex justify-content-center mt-3 gap-5">
+                            <Button variant="danger" onClick={onHide}>
+                                Fermer le panier
+                            </Button>
+                            <Button variant="success" onClick={() => alert('Commande passée !')}>
+                                Passer commande
+                            </Button>
+                        </div>
                     </>
                 ) : (
                     <p>Votre panier est vide.</p>

@@ -12,7 +12,6 @@ import './Card.css'; // Pour le style du drawer
 import HomeScreen from './HomeScreen';
 import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
-//import CartModal  from './CartModal';
 //import AboutText from './components/AboutText';
 //import Apropos from './components/Apropos';
 //import Faq from './components/Faq';
