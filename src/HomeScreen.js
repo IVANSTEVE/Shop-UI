@@ -3,7 +3,7 @@ import {Row} from "react-bootstrap";
 import React from "react";
  
 function HomeScreen({setSelectedProduct, fetcher}) {
-    const {data, error} = useSWR('http://localhost:8080/products', fetcher);
+    const {data, error} = useSWR('http://localhost:8090/products', fetcher);
 
     if (error) return <div>Échec du chargement des catégories</div>;
     if (!data) return <div>Chargement des catégories...</div>;

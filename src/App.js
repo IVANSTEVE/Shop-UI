@@ -12,6 +12,7 @@ import './Card.css'; // Pour le style du drawer
 import HomeScreen from './HomeScreen';
 import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
+import AuthForm from './AuthForm';
 //import AboutText from './components/AboutText';
 //import Apropos from './components/Apropos';
 //import Faq from './components/Faq';
@@ -34,7 +35,7 @@ const categoryLabels = {
 function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const { data: categories, error: categoriesError } = useSWR('http://localhost:8080/categories', fetcher);
+    const { data: categories, error: categoriesError } = useSWR('http://localhost:8090/categories', fetcher);
     const [cart, setCart] = useState([]);
     const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
     const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
@@ -43,6 +44,11 @@ function App() {
     const toggleCart = () => {
         setShowCart(!showCart); // Change la visibilité du panier
     };
+
+    const toggleAuth = () => {
+        setShowAuth(!showAuth); // Basculer entre formulaire et autres écrans
+    };
+    const [showAuth, setShowAuth] = useState(false);
 
     return (
         <div className="background">
@@ -104,6 +110,7 @@ function App() {
                                     <span class="visually-hidden">unread messages</span>
                                 </span>
                             </Button>
+                            <button onClick={toggleAuth}>Login / Register</button>
                         </Nav>
 
                     </Navbar.Collapse>
@@ -112,8 +119,11 @@ function App() {
 
             {/* Affichage conditionnel des composants selon la sélection */}
             <main className="content">
-                {/* Si showCart est vrai, afficher uniquement le panier */}
-                {showCart ? (
+                {showAuth ? (
+                    <AuthForm /> // Affichez le formulaire si l'état est vrai
+                ):
+                /* Si showCart est vrai, afficher uniquement le panier */
+                showCart ? (
                     <CartDrawer
                         cart={cart}
                         setCart={setCart}

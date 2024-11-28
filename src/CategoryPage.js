@@ -3,7 +3,7 @@ import {Card} from "react-bootstrap";
 import React from "react";
  
 function CategoryPage({category, setSelectedProduct, fetcher, categoryLabels}) {
-    const {data, error} = useSWR(`http://localhost:8080/categories/${category}/products`, fetcher);
+    const {data, error} = useSWR(`http://localhost:8090/categories/${category}/products`, fetcher);
 
     if (error) return <div className="error-message">Échec du chargement des produits</div>;
     if (!data) return <div className="loading-message">Chargement des produits...</div>;

@@ -4,7 +4,7 @@ import {Button, Card, Col, Row} from "react-bootstrap";
  
 function ProductDetails({productId, setSelectedProduct, fetcher, cart, setCart, setShowCart}) {
  
-    const {data, error} = useSWR(`http://localhost:8080/products/${productId}`, fetcher);
+    const {data, error} = useSWR(`http://localhost:8090/products/${productId}`, fetcher);
 
     if (error) return <div>Échec du chargement des détails du produit</div>;
     if (!data) return <div>Chargement des détails du produit...</div>;
