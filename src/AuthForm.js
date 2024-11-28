@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import './AuthForm.css'; 
+import './AuthForm.css';
 
-function AuthForm() {
+function AuthForm({ onHide }) {
     const [isLoginMode, setIsLoginMode] = useState(true);
 
     const toggleMode = () => {
         setIsLoginMode(!isLoginMode);
     };
-    
 
     return (
         <div className="auth-form-container">
             <div className="formWrapper">
                 <div className="card">
+
                     <div className="card-header">
                         <div
                             className={`form-header ${isLoginMode ? 'active' : ''}`}
@@ -37,6 +37,8 @@ function AuthForm() {
                                     Se Souvenir de moi
                                 </label>
                                 <button type="submit" className="formButton">Connexion</button>
+                                <hr />
+                                <button onClick={onHide} type="danger" className="formButton2">Fermer le formulaire{/* Bouton pour fermer le formulaire */} </button>
                             </form>
                         ) : (
                             <form id="registerForm">
@@ -48,6 +50,9 @@ function AuthForm() {
                                     J'accepte les termes de l'accord
                                 </label>
                                 <button type="submit" className="formButton">Inscription</button>
+                                <hr />
+                                
+                                <button onClick={onHide} type="danger" className="formButton2">Fermer le formulaire{/* Bouton pour fermer le formulaire */} </button>
                             </form>
                         )}
                     </div>
@@ -58,3 +63,4 @@ function AuthForm() {
 }
 
 export default AuthForm;
+

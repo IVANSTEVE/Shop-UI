@@ -35,18 +35,24 @@ const categoryLabels = {
 function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const { data: categories, error: categoriesError } = useSWR('http://localhost:8090/categories', fetcher);
+    const { data: categories, error: categoriesError } = useSWR('http://localhost:8080/categories', fetcher);
     const [cart, setCart] = useState([]);
     const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
     const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
 
 
-    const toggleCart = () => {
-        setShowCart(!showCart); // Change la visibilité du panier
+    const toggleAuth = () => {
+        setShowAuth(!showAuth);
+        setShowCart(false); // Fermer le panier si le formulaire est actif
+        setSelectedCategory(null); // Réinitialiser la catégorie sélectionnée
+        setSelectedProduct(null); // Réinitialiser le produit sélectionné
     };
 
-    const toggleAuth = () => {
-        setShowAuth(!showAuth); // Basculer entre formulaire et autres écrans
+    const toggleCart = () => {
+        setShowCart(!showCart);
+        setShowAuth(false); // Fermer le formulaire si le panier est actif
+        setSelectedCategory(null); // Réinitialiser la catégorie sélectionnée
+        setSelectedProduct(null); // Réinitialiser le produit sélectionné
     };
     const [showAuth, setShowAuth] = useState(false);
 
@@ -76,22 +82,32 @@ function App() {
                     </Navbar.Brand>
                     <Navbar.Toggle aria-controls="basic-navbar-nav" />
                     <Navbar.Collapse id="basic-navbar-nav" className="justify-content-center">
-                        <Nav>
+                        <Nav className="d-flex gap-3">
+                            <Button
+                                variant="outline-light"
+                                onClick={() => {
+                                    setSelectedCategory(null);
+                                    setSelectedProduct(null);
+                                    setShowAuth(false);
+                                    setShowCart(false);
+                                }}
+                            >
+                                Accueil
+                            </Button>
                             {categoriesError ? (
                                 <Button variant="outline-light" disabled>Échec du chargement</Button>
                             ) : !categories ? (
                                 <Button variant="outline-light" disabled>Chargement...</Button>
                             ) : (
                                 categories.map((category) => (
-
                                     <Button
                                         key={category}
                                         variant="outline-light"
-                                        className="category-button"
                                         onClick={() => {
                                             setSelectedCategory(category.toLowerCase());
                                             setSelectedProduct(null);
-                                            setShowCart(false); // Assurez-vous que le panier est fermé
+                                            setShowAuth(false);
+                                            setShowCart(false);
                                         }}
                                     >
                                         {categoryLabels[category]}
@@ -105,61 +121,63 @@ function App() {
                             >
                                 <i className="bi bi-cart-check" style={{ fontSize: '1.0rem', marginRight: '2px' }}></i>
                                 Panier
-                                <span class="position-absolute top-0 start-30  badge rounded-pill bg-danger">
-                                {cartItemCount} {/* Utilise la valeur mise à jour */}
-                                    <span class="visually-hidden">unread messages</span>
+                                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {cartItemCount}
+                                    <span className="visually-hidden">articles dans le panier</span>
                                 </span>
                             </Button>
-                            <button onClick={toggleAuth}>Login / Register</button>
+                            <Button variant="outline-light" onClick={toggleAuth}>
+                                Login / Register
+                            </Button>
                         </Nav>
-
                     </Navbar.Collapse>
+
                 </Container>
             </Navbar>
 
             {/* Affichage conditionnel des composants selon la sélection */}
             <main className="content">
-                {showAuth ? (
-                    <AuthForm /> // Affichez le formulaire si l'état est vrai
-                ):
-                /* Si showCart est vrai, afficher uniquement le panier */
-                showCart ? (
+                {showAuth && (
+                    <AuthForm onHide={() => setShowAuth(false)} />
+                )}
+                {!showAuth && showCart && (
                     <CartDrawer
                         cart={cart}
                         setCart={setCart}
                         show={showCart}
                         onHide={() => setShowCart(false)}
-                        updateCartItemCount={(count) => setCartItemCount(count)} // Mise à jour du compteur
+                        updateCartItemCount={(count) => setCartItemCount(count)}
                     />
-                ) :
-                    // Si showCart est false, afficher les autres composants en fonction des sélections
-                    selectedCategory && !selectedProduct ? (
-                        <CategoryPage
-                            category={selectedCategory}
-                            setSelectedProduct={setSelectedProduct}
-                            fetcher={fetcher}
-                            categoryLabels={categoryLabels}
-                        />
-                    ) : selectedCategory && selectedProduct ? (
-                        <ProductDetails
-                            productId={selectedProduct}
-                            setSelectedProduct={setSelectedProduct}
-                            fetcher={fetcher}
-                            cart={cart}
-                            setCart={setCart}
-                            showCart={showCart}
-                            setShowCart={setShowCart}
-                        />
-                    ) : (
-                        <HomeScreen
-                            categories={categories}
-                            setSelectedCategory={setSelectedCategory}
-                            setSelectedProduct={setSelectedProduct}
-                            fetcher={fetcher}
-                        />
-                    )
-                }
+                )}
+                {!showAuth && !showCart && selectedCategory && !selectedProduct && (
+                    <CategoryPage
+                        category={selectedCategory}
+                        setSelectedProduct={setSelectedProduct}
+                        fetcher={fetcher}
+                        categoryLabels={categoryLabels}
+                    />
+                )}
+                {!showAuth && !showCart && selectedCategory && selectedProduct && (
+                    <ProductDetails
+                        productId={selectedProduct}
+                        setSelectedProduct={setSelectedProduct}
+                        fetcher={fetcher}
+                        cart={cart}
+                        setCart={setCart}
+                        showCart={showCart}
+                        setShowCart={setShowCart}
+                    />
+                )}
+                {!showAuth && !showCart && !selectedCategory && !selectedProduct && (
+                    <HomeScreen
+                        categories={categories}
+                        setSelectedCategory={setSelectedCategory}
+                        setSelectedProduct={setSelectedProduct}
+                        fetcher={fetcher}
+                    />
+                )}
             </main>
+
             <Footer />
         </div>
     );
