@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, Table, Button, Form } from 'react-bootstrap';
 import './Card.css'; // Pour le style du panier
 
-function CartDrawer({ cart, setCart, show, onHide }) {
+function CartDrawer({ cart, setCart, show, onHide, updateCartItemCount }) {
     // Mise à jour de la quantité d'un produit
     const updateQuantity = (idProduct, newQuantity) => {
         const updatedCart = cart.map((item) =>
@@ -16,6 +16,24 @@ function CartDrawer({ cart, setCart, show, onHide }) {
     // Calcul du total général du panier
     const calculTotal = () =>
         cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
+
+    const getCartItemsCount = () =>
+        cart.reduce((total, item) => total + item.quantity, 0);
+    // Mettre à jour le compteur d'articles après tout changement dans le panier
+    React.useEffect(() => {
+        updateCartItemCount(getCartItemsCount());
+    }, [cart, updateCartItemCount]); // Réévalue lorsque `cart` change
+
+    const [selectedItems, setSelectedItems] = React.useState([]);
+    const handleSelection = (idProduct, isSelected) => {
+        setSelectedItems((prevSelected) =>
+            isSelected
+                ? [...prevSelected, idProduct] // Ajouter l'article
+                : prevSelected.filter((id) => id !== idProduct) // Retirer l'article
+        );
+    };
+    
+
 
     // Suppression d'un ardicle
     const removeFromCard = (idProduct) => {
@@ -32,7 +50,7 @@ function CartDrawer({ cart, setCart, show, onHide }) {
     return (
         <Card show={show} onHide={onHide} placement="start">
             <Card.Header>
-                <Card.Title>Votre Panier</Card.Title>
+                <Card.Title className="d-flex justify-content-center mt-3 gap-5">Votre Panier ({getCartItemsCount()} articles)</Card.Title>
 
 
 
@@ -48,6 +66,7 @@ function CartDrawer({ cart, setCart, show, onHide }) {
                                     <th>Quantité</th>
                                     <th>Prix unitaire</th>
                                     <th>Total ligne</th>
+                                    <th>Sélectionner</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -76,7 +95,15 @@ function CartDrawer({ cart, setCart, show, onHide }) {
                                             </Form.Select>
                                         </td>
                                         <td>{item.price.toFixed(2)} €</td>
-                                        <td> {(item.quantity * item.price).toFixed(2)} €</td>
+                                        <td>{(item.quantity * item.price).toFixed(2)} €</td>
+                                        <td>
+                                            <Form.Check
+                                                type="checkbox"
+                                                onChange={(e) =>
+                                                    handleSelection(item.idProduct, e.target.checked)
+                                                }
+                                            />
+                                        </td>
                                         <td>
                                             <Button
                                                 variant="danger"
@@ -90,9 +117,10 @@ function CartDrawer({ cart, setCart, show, onHide }) {
                                 ))}
                             </tbody>
                         </Table>
+
                         <div className="mt-3 text-end">
                             <h5>
-                                Total général : <strong>{calculTotal()} €</strong>
+                                Total général ( TVA 21 % Comprise): <strong>{calculTotal().toFixed(2)} €</strong>
                             </h5>
                         </div>
                         <div className="d-flex justify-content-center mt-3 gap-5">

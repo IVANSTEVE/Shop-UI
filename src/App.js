@@ -37,6 +37,9 @@ function App() {
     const { data: categories, error: categoriesError } = useSWR('http://localhost:8080/categories', fetcher);
     const [cart, setCart] = useState([]);
     const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
+    const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
+
+
     const toggleCart = () => {
         setShowCart(!showCart); // Change la visibilité du panier
     };
@@ -82,6 +85,7 @@ function App() {
                                         onClick={() => {
                                             setSelectedCategory(category.toLowerCase());
                                             setSelectedProduct(null);
+                                            setShowCart(false); // Assurez-vous que le panier est fermé
                                         }}
                                     >
                                         {categoryLabels[category]}
@@ -95,6 +99,10 @@ function App() {
                             >
                                 <i className="bi bi-cart-check" style={{ fontSize: '1.0rem', marginRight: '2px' }}></i>
                                 Panier
+                                <span class="position-absolute top-0 start-30  badge rounded-pill bg-danger">
+                                {cartItemCount} {/* Utilise la valeur mise à jour */}
+                                    <span class="visually-hidden">unread messages</span>
+                                </span>
                             </Button>
                         </Nav>
 
@@ -111,8 +119,9 @@ function App() {
                         setCart={setCart}
                         show={showCart}
                         onHide={() => setShowCart(false)}
+                        updateCartItemCount={(count) => setCartItemCount(count)} // Mise à jour du compteur
                     />
-                ) : (
+                ) :
                     // Si showCart est false, afficher les autres composants en fonction des sélections
                     selectedCategory && !selectedProduct ? (
                         <CategoryPage
@@ -139,7 +148,7 @@ function App() {
                             fetcher={fetcher}
                         />
                     )
-                )}
+                }
             </main>
             <Footer />
         </div>
