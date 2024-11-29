@@ -35,7 +35,7 @@ const categoryLabels = {
 function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const { data: categories, error: categoriesError } = useSWR('http://localhost:8080/categories', fetcher);
+    const { data: categories, error: categoriesError } = useSWR('http://localhost:8090/categories', fetcher);
     const [cart, setCart] = useState([]);
     const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
     const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
