@@ -1,30 +1,61 @@
 import React from 'react';
-import { Card, Table, Button, Form } from 'react-bootstrap';
+import { Card, Table, Button, Form, Spinner } from 'react-bootstrap';
 import './Card.css'; // Pour le style du panier
+import { useState, useEffect } from 'react';
 
-function CartDrawer({ cart, setCart, show, onHide, updateCartItemCount }) {
+function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
+
+    const [cart, setCart] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Charger les données du panier depuis le backend
+    useEffect(() => {
+        if (show) {
+            setIsLoading(true);
+            fetch(`http://localhost:8090/cart/${cartId}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    const items = Array.isArray(data.items) ? data.items : []; // Vérifiez si data.items est un tableau
+                    setCart(items);
+                    const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+                    updateCartItemCount(itemCount);
+                })
+                .catch((error) => console.error('Erreur lors du chargement du panier:', error))
+
+                .finally(() => setIsLoading(false));
+        }
+    }, [show, cartId, updateCartItemCount]);
+
     // Mise à jour de la quantité d'un produit
     const updateQuantity = (idProduct, newQuantity) => {
-        const updatedCart = cart.map((item) =>
-            item.idProduct === idProduct
-                ? { ...item, quantity: newQuantity }
-                : item
-        );
-        setCart(updatedCart);
+        fetch(`http://localhost:8090/cart/${cartId}/update?productId=${idProduct}&quantity=${newQuantity}`, {
+            method: 'PUT',
+        })
+            .then((response) => {
+                if (response.ok) {
+                    setCart((prevCart) =>
+                        prevCart.map((item) =>
+                            item.idProduct === idProduct ? { ...item, quantity: newQuantity } : item
+                        )
+                    );
+                }
+            })
+            .catch((error) => console.error('Erreur lors de la mise à jour de la quantité:', error));
     };
 
     // Calcul du total général du panier
     const calculTotal = () =>
-        cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
+        (cart || []).reduce((acc, item) => acc + item.quantity * item.price, 0);
 
     const getCartItemsCount = () =>
-        cart.reduce((total, item) => total + item.quantity, 0);
+        (cart || []).reduce((total, item) => total + item.quantity, 0);
     // Mettre à jour le compteur d'articles après tout changement dans le panier
     React.useEffect(() => {
         updateCartItemCount(getCartItemsCount());
     }, [cart, updateCartItemCount]); // Réévalue lorsque `cart` change
 
-    const [selectedItems, setSelectedItems] = React.useState([]);
+
+    const [selectedItems, setSelectedItems] = useState([]);
     const handleSelection = (idProduct, isSelected) => {
         setSelectedItems((prevSelected) =>
             isSelected
@@ -32,31 +63,38 @@ function CartDrawer({ cart, setCart, show, onHide, updateCartItemCount }) {
                 : prevSelected.filter((id) => id !== idProduct) // Retirer l'article
         );
     };
-    
 
 
-    // Suppression d'un ardicle
-    const removeFromCard = (idProduct) => {
-        setCart(cart.filter((item) => item.idProduct !== idProduct));
+
+    // Suppression d'un article
+    const removeFromCart = (idProduct) => {
+        fetch(`http://localhost:8090/cart/${cartId}/remove?productId=${idProduct}`, {
+            method: 'DELETE',
+        })
+            .then((response) => {
+                if (response.ok) {
+                    setCart(cart.filter((item) => item.idProduct !== idProduct));
+                }
+            })
+            .catch((error) => console.error('Erreur lors de la suppression:', error));
     };
 
-    if (!show) {
-        return null; // Si show est false, le panier ne s'affiche pas
-    }
-
-
-
+    if (!show) return null;
 
     return (
         <Card show={show} onHide={onHide} placement="start">
             <Card.Header>
-                <Card.Title className="d-flex justify-content-center mt-3 gap-5">Votre Panier ({getCartItemsCount()} articles)</Card.Title>
+                <Card.Title className="d-flex justify-content-center mt-3 gap-5">Votre Panier ({cart.reduce((total, item) => total + item.quantity, 0)} articles)</Card.Title>
 
 
 
             </Card.Header>
             <Card.Body>
-                {cart.length > 0 ? (
+                {isLoading ? (
+                    <div className="d-flex justify-content-center">
+                        <Spinner animation="border" />
+                    </div>
+                ) : cart.length > 0 ? (
                     <>
                         <Table responsive striped bordered hover>
                             <thead>
@@ -108,7 +146,7 @@ function CartDrawer({ cart, setCart, show, onHide, updateCartItemCount }) {
                                             <Button
                                                 variant="danger"
                                                 size="sm"
-                                                onClick={() => removeFromCard(item.idProduct)}
+                                                onClick={() => removeFromCart(item.idProduct)}
                                             >
                                                 Supprimer
                                             </Button>
