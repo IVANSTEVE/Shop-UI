@@ -6,10 +6,12 @@ import { useState, useEffect } from 'react';
 function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
 
     const [cart, setCart] = useState({
-        cartID: null,
-        numberOfProducts: 0,
-        cartProducts: [],
-        cartTotalPrice: 0,
+        cartID: null, // ID du panier, par défaut null
+        userId: null, // Utilisateur lié, par défaut null
+        cartProducts: [], // Liste des produits, par défaut vide
+        cartTotalPrice: 0, // Prix total TTC, par défaut 0
+        cartTotalPriceExcludingVAT: 0, // Prix total HT, par défaut 0
+        numberOfProducts: 0, // Nombre total de produits, par défaut 0
     });
 
     const [isLoading, setIsLoading] = useState(false);
