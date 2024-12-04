@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Navbar, Nav, Button, Container } from "react-bootstrap";
@@ -36,10 +36,31 @@ function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const { data: categories, error: categoriesError } = useSWR('http://localhost:8090/categories', fetcher);
-    const [cart, setCart] = useState([]);
+    const [cart, setCart] = useState({
+        cartID: null, // ID du panier, par défaut null
+        userId: null, // Utilisateur lié, par défaut null
+        cartProducts: [], // Liste des produits, par défaut vide
+        cartTotalPrice: 0, // Prix total TTC, par défaut 0
+        cartTotalPriceExcludingVAT: 0, // Prix total HT, par défaut 0
+        numberOfProducts: 0, // Nombre total de produits, par défaut 0
+    });
     const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
     const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
 
+    useEffect(() => {
+        const fetchCart = async () => {
+            try {
+                const response = await fetch('http://localhost:8090/carts/12');
+                const data = await response.json();
+                setCart(data); // Met à jour le panier avec les données retournées
+                setCartItemCount(data.numberOfProducts || 0); // Met à jour le compteur
+            } catch (error) {
+                console.error("Erreur lors de la récupération du panier:", error);
+            }
+        };
+
+        fetchCart(); // Appelle la fonction lors du chargement
+    }, []);
 
     const toggleAuth = () => {
         setShowAuth(!showAuth);
@@ -142,6 +163,7 @@ function App() {
                 )}
                 {!showAuth && showCart && (
                     <CartDrawer
+                        cartId={cart.cartID}
                         cart={cart}
                         setCart={setCart}
                         show={showCart}

@@ -1,82 +1,72 @@
 import React from 'react';
-import { Card, Table, Button, Form, Spinner } from 'react-bootstrap';
+import { Card, Table, Form, Button, Spinner } from 'react-bootstrap';
 import './Card.css'; // Pour le style du panier
 import { useState, useEffect } from 'react';
 
 function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
 
-    const [cart, setCart] = useState([]);
+    const [cart, setCart] = useState({
+        cartID: null,
+        numberOfProducts: 0,
+        cartProducts: [],
+        cartTotalPrice: 0,
+    });
+
     const [isLoading, setIsLoading] = useState(false);
 
     // Charger les données du panier depuis le backend
     useEffect(() => {
         if (show) {
             setIsLoading(true);
-            fetch(`http://localhost:8090/cart/${cartId}`)
+            fetch(`http://localhost:8090/carts/12`)
                 .then((response) => response.json())
                 .then((data) => {
-                    const items = Array.isArray(data.items) ? data.items : []; // Vérifiez si data.items est un tableau
-                    setCart(items);
-                    const itemCount = items.reduce((total, item) => total + item.quantity, 0);
-                    updateCartItemCount(itemCount);
+                    setCart(data); // Stockez tout l'objet JSON retourné
+                    updateCartItemCount(data.numberOfProducts);
                 })
                 .catch((error) => console.error('Erreur lors du chargement du panier:', error))
-
                 .finally(() => setIsLoading(false));
         }
     }, [show, cartId, updateCartItemCount]);
 
-    // Mise à jour de la quantité d'un produit
     const updateQuantity = (idProduct, newQuantity) => {
-        fetch(`http://localhost:8090/cart/${cartId}/update?productId=${idProduct}&quantity=${newQuantity}`, {
+        fetch(`http://localhost:8090/carts/${cart.cartID}/products/${idProduct}`, {
             method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ quantity: newQuantity }),
         })
             .then((response) => {
-                if (response.ok) {
-                    setCart((prevCart) =>
-                        prevCart.map((item) =>
-                            item.idProduct === idProduct ? { ...item, quantity: newQuantity } : item
-                        )
-                    );
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la mise à jour de la quantité.');
                 }
+                return response.json();
+            })
+            .then((updatedCart) => {
+                setCart(updatedCart);
+                updateCartItemCount(updatedCart.numberOfProducts);
             })
             .catch((error) => console.error('Erreur lors de la mise à jour de la quantité:', error));
     };
 
-    // Calcul du total général du panier
-    const calculTotal = () =>
-        (cart || []).reduce((acc, item) => acc + item.quantity * item.price, 0);
-
-    const getCartItemsCount = () =>
-        (cart || []).reduce((total, item) => total + item.quantity, 0);
-    // Mettre à jour le compteur d'articles après tout changement dans le panier
-    React.useEffect(() => {
-        updateCartItemCount(getCartItemsCount());
-    }, [cart, updateCartItemCount]); // Réévalue lorsque `cart` change
-
-
-    const [selectedItems, setSelectedItems] = useState([]);
-    const handleSelection = (idProduct, isSelected) => {
-        setSelectedItems((prevSelected) =>
-            isSelected
-                ? [...prevSelected, idProduct] // Ajouter l'article
-                : prevSelected.filter((id) => id !== idProduct) // Retirer l'article
-        );
-    };
-
-
-
-    // Suppression d'un article
     const removeFromCart = (idProduct) => {
-        fetch(`http://localhost:8090/cart/${cartId}/remove?productId=${idProduct}`, {
-            method: 'DELETE',
-        })
-            .then((response) => {
-                if (response.ok) {
-                    setCart(cart.filter((item) => item.idProduct !== idProduct));
-                }
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+            fetch(`http://localhost:8090/carts/${cart.cartID}/products/${idProduct}`, {
+                method: 'DELETE',
             })
-            .catch((error) => console.error('Erreur lors de la suppression:', error));
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Erreur lors de la suppression du produit.');
+                    }
+                    return response.json();
+                })
+                .then((updatedCart) => {
+                    setCart(updatedCart); // Mettre à jour l'état local
+                    updateCartItemCount(updatedCart.numberOfProducts);
+                })
+                .catch((error) => console.error('Erreur lors de la suppression:', error));
+        }
     };
 
     if (!show) return null;
@@ -84,45 +74,40 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
     return (
         <Card show={show} onHide={onHide} placement="start">
             <Card.Header>
-                <Card.Title className="d-flex justify-content-center mt-3 gap-5">Votre Panier ({cart.reduce((total, item) => total + item.quantity, 0)} articles)</Card.Title>
-
-
-
+                <Card.Title className="d-flex justify-content-center mt-3 gap-5">
+                    Votre Panier ({cart.numberOfProducts} articles)
+                </Card.Title>
             </Card.Header>
             <Card.Body>
                 {isLoading ? (
                     <div className="d-flex justify-content-center">
                         <Spinner animation="border" />
                     </div>
-                ) : cart.length > 0 ? (
+                ) : (
                     <>
                         <Table responsive striped bordered hover>
                             <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Article</th>
-                                    <th>Quantité</th>
-                                    <th>Prix unitaire</th>
-                                    <th>Total ligne</th>
-                                    <th>Sélectionner</th>
-                                    <th>Action</th>
-                                </tr>
+                            <tr>
+                                <th>#</th>
+                                <th>Article</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Total ligne</th>
+                                <th>Action</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {cart.map((item, index) => (
-                                    <tr key={item.idProduct}>
+                            {cart.cartProducts && cart.cartProducts.length > 0 ? (
+                                cart.cartProducts.map((item, index) => (
+                                    <tr key={item.id}>
                                         <td>{index + 1}</td>
                                         <td>{item.productName}</td>
                                         <td>
                                             <Form.Select
                                                 size="sm"
-                                                style={{ width: '80px' }}
                                                 value={item.quantity}
                                                 onChange={(e) =>
-                                                    updateQuantity(
-                                                        item.idProduct,
-                                                        parseInt(e.target.value)
-                                                    )
+                                                    updateQuantity(item.productId, parseInt(e.target.value))
                                                 }
                                             >
                                                 {[...Array(10).keys()].map((val) => (
@@ -132,33 +117,31 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
                                                 ))}
                                             </Form.Select>
                                         </td>
-                                        <td>{item.price.toFixed(2)} €</td>
-                                        <td>{(item.quantity * item.price).toFixed(2)} €</td>
-                                        <td>
-                                            <Form.Check
-                                                type="checkbox"
-                                                onChange={(e) =>
-                                                    handleSelection(item.idProduct, e.target.checked)
-                                                }
-                                            />
-                                        </td>
+                                        <td>{item.productUnitPrice.toFixed(2)} €</td>
+                                        <td>{item.totalPrice.toFixed(2)} €</td>
                                         <td>
                                             <Button
                                                 variant="danger"
                                                 size="sm"
-                                                onClick={() => removeFromCart(item.idProduct)}
+                                                onClick={() => removeFromCart(item.productId)}
                                             >
                                                 Supprimer
                                             </Button>
                                         </td>
                                     </tr>
-                                ))}
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="6" className="text-center">
+                                        Aucun produit dans le panier.
+                                    </td>
+                                </tr>
+                            )}
                             </tbody>
                         </Table>
-
                         <div className="mt-3 text-end">
                             <h5>
-                                Total général ( TVA 21 % Comprise): <strong>{calculTotal().toFixed(2)} €</strong>
+                                Total général (TVA 21% comprise): <strong>{cart.cartTotalPrice.toFixed(2)} €</strong>
                             </h5>
                         </div>
                         <div className="d-flex justify-content-center mt-3 gap-5">
@@ -170,8 +153,6 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
                             </Button>
                         </div>
                     </>
-                ) : (
-                    <p>Votre panier est vide.</p>
                 )}
             </Card.Body>
         </Card>
