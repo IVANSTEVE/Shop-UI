@@ -14,7 +14,6 @@ import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
 import {getCookie} from './utils';
-import UserPage from './UserPage'; // Assurez-vous que l'import est correct
 //import AboutText from './components/AboutText';
 //import Apropos from './components/Apropos';
 //import Faq from './components/Faq';
@@ -37,7 +36,6 @@ const categoryLabels = {
 };
 
 function App() {
-    // Ajoutez la déclaration de user
     const [user, setUser] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -50,7 +48,7 @@ function App() {
         cartTotalPriceExcludingVAT: 0, // Prix total HT, par défaut 0
         numberOfProducts: 0, // Nombre total de produits, par défaut 0
     });
-    const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
+    const [showCart, setShowCart] = useState(false);
     const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
     const initialized = useRef(false); // Utilisation de useRef pour stocker l’état mutable
 
@@ -96,6 +94,33 @@ function App() {
         initializeCart();
     }, []); // Pas de dépendances supplémentaires nécessaires
 
+    // Effet pour surveiller l'état utilisateur
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            const fetchUser = async () => {
+                try {
+                    const response = await fetch('http://localhost:8090/auth/me', {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    if (!response.ok) throw new Error("Utilisateur non authentifié");
+                    const userData = await response.json();
+                    setUser(userData);
+                } catch (error) {
+                    console.error(error);
+                    setUser(null);
+                }
+            };
+
+            fetchUser();
+        }
+    }, []); // Exécute seulement une fois au chargement de l'application
+
+    const handleLogout = () => {
+        localStorage.removeItem('token'); // Supprime le token
+        setUser(null); // Réinitialise immédiatement l'utilisateur
+        setShowAuth(false); // Assurez-vous que l'authentification est masquée
+    };
 
     const toggleAuth = () => {
         setShowAuth(!showAuth);
@@ -140,17 +165,6 @@ function App() {
                     <Navbar.Toggle aria-controls="basic-navbar-nav"/>
                     <Navbar.Collapse id="basic-navbar-nav" className="justify-content-center">
                         <Nav className="d-flex gap-3">
-                            <Button
-                                variant="outline-light"
-                                onClick={() => {
-                                    setSelectedCategory(null);
-                                    setSelectedProduct(null);
-                                    setShowAuth(false);
-                                    setShowCart(false);
-                                }}
-                            >
-                                Accueil
-                            </Button>
                             {categoriesError ? (
                                 <Button variant="outline-light" disabled>Échec du chargement</Button>
                             ) : !categories ? (
@@ -184,18 +198,34 @@ function App() {
                                     <span className="visually-hidden">articles dans le panier</span>
                                 </span>
                             </Button>
-                            <Button variant="outline-light" onClick={toggleAuth}>
-                                Login / Register
-                            </Button>
+                        </Nav>
+                        <Nav className="ms-auto">
+                            {user ? (
+                                <>
+            <span className="navbar-text text-light me-3">
+                Bienvenue, {user.userName} !
+            </span>
+                                    <Button variant="outline-danger" onClick={handleLogout}>
+                                        Déconnexion
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button variant="outline-light" onClick={toggleAuth}>
+                                    Login / Register
+                                </Button>
+                            )}
                         </Nav>
                     </Navbar.Collapse>
                 </Container>
             </Navbar>
             {/* Affichage conditionnel des composants selon la sélection */}
             <main className="content">
-                {user ? (
-                    <UserPage user={user} />
-                ) : showAuth && <AuthForm onHide={() => setShowAuth(false)}/>}
+                {showAuth && (
+                    <AuthForm
+                        onHide={() => setShowAuth(false)}
+                        setUser={setUser}
+                    />
+                )}
                 {!showAuth && showCart && (
                     <CartDrawer
                         cartId={cart.cartID}
