@@ -14,9 +14,12 @@ import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
 import {getCookie} from './utils';
+import UserPage from './UserPage'; // Assurez-vous que l'import est correct
 //import AboutText from './components/AboutText';
 //import Apropos from './components/Apropos';
 //import Faq from './components/Faq';
+
+const [showAuth, setShowAuth] = useState(false);
 
 const fetcher = async (url) => {
     const response = await fetch(url);
@@ -34,6 +37,8 @@ const categoryLabels = {
 };
 
 function App() {
+    // Ajoutez la déclaration de user
+    const [user, setUser] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const {data: categories, error: categoriesError} = useSWR('http://localhost:8090/categories', fetcher);
@@ -188,7 +193,9 @@ function App() {
             </Navbar>
             {/* Affichage conditionnel des composants selon la sélection */}
             <main className="content">
-                {showAuth && <AuthForm onHide={() => setShowAuth(false)}/>}
+                {user ? (
+                    <UserPage user={user} />
+                ) : showAuth && <AuthForm onHide={() => setShowAuth(false)}/>}
                 {!showAuth && showCart && (
                     <CartDrawer
                         cartId={cart.cartID}
