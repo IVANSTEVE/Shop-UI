@@ -19,7 +19,7 @@ import UserPage from './UserPage'; // Assurez-vous que l'import est correct
 //import Apropos from './components/Apropos';
 //import Faq from './components/Faq';
 
-const [showAuth, setShowAuth] = useState(false);
+
 
 const fetcher = async (url) => {
     const response = await fetch(url);

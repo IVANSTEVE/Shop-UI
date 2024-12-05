@@ -131,10 +131,12 @@ function AuthForm({ onHide, setUser }) {
                                 <button onClick={onHide} type="button" className="formButton2">Fermer</button>
                             </form>
                         ) : (
-                            <form id="registerForm">
-                                <input type="text" className="form-control" placeholder="@Utilisateur" />
-                                <input type="password" className="form-control" placeholder="Mot de passe" />
-                                <input type="password" className="form-control" placeholder="Confirmer mot de passe" />
+                            <form id="registerForm" onSubmit={handleRegister}>
+                                <input type="text" name="nom" className="form-control" placeholder="Nom" onChange={handleChange}/>
+                                <input type="text" name="prenom" className="form-control" placeholder="Prenom" onChange={handleChange}/>
+                                <input type="text" name="email" className="form-control" placeholder="Email" onChange={handleChange}/>
+                                <input type="password" name="password" className="form-control" placeholder="Mot de passe" onChange={handleChange}/>
+                                <input type="password" name="confirmPassword" className="form-control" placeholder="Confirmer mot de passe" onChange={handleChange}/>
                                 <label>
                                     <input type="checkbox" className="form-check" />
                                     J'accepte les termes de l'accord
