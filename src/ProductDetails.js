@@ -1,30 +1,45 @@
 import React from 'react';
 import useSWR from 'swr';
 import { Button, Card, Col, Row } from 'react-bootstrap';
+import {getCookie} from "./utils";
 
-function ProductDetails({ setCart, productId, setSelectedProduct }) {
+function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCount }) {
     const fetcher = (url) => fetch(url).then((res) => res.json());
     const { data, error } = useSWR(`http://localhost:8090/products/${productId}`, fetcher);
 
     if (error) return <div>Erreur lors du chargement des détails.</div>;
     if (!data) return <div>Chargement...</div>;
-    const addToCart = () => {
-        fetch(`http://localhost:8090/carts/products`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({productId: data.idProduct, quantity: 1 }),
-        })
-            .then((response) => {
-                if (response.ok) {
-                    response.json().then((data) => {
-                        alert(`Produit ajouté au panier ${data.cartID}`);
-                    });
-                    alert(`Ajouté au panier ${data.cartID}`);
-                    setCart (data);
-                }
-            })
-            .catch((error) => console.error('Erreur:', error));
+    const addToCart = async () => {
+        try {
+            const cartId = getCookie('cartId'); // Récupérer le cartId depuis le cookie
+
+            if (!cartId) {
+                throw new Error("Aucun panier existant. Veuillez actualiser la page.");
+            }
+
+            console.log(`Ajout du produit au panier ${cartId}...`);
+
+            const addProductResponse = await fetch(`http://localhost:8090/carts/products`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cartId, productId: productId, quantity: 1 }),
+            });
+
+            if (!addProductResponse.ok) {
+                throw new Error("Erreur lors de l'ajout du produit au panier.");
+            }
+
+            const updatedCart = await addProductResponse.json();
+            alert(`Produit ajouté au panier ${updatedCart.cartID}`);
+            setCart(updatedCart);
+            setCartItemCount(updatedCart.numberOfProducts || 0);
+        } catch (error) {
+            console.error("Erreur :", error.message);
+            alert("Impossible d'ajouter le produit au panier. Veuillez réessayer.");
+        }
     };
+
+
 
     return (
         <Row className="justify-content-center mt-4">

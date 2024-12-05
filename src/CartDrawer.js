@@ -13,23 +13,64 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
         cartTotalPriceExcludingVAT: 0, // Prix total HT, par défaut 0
         numberOfProducts: 0, // Nombre total de produits, par défaut 0
     });
+    const getCartIdFromCookie = () => {
+        const cookies = document.cookie.split("; ");
+        const cartIdCookie = cookies.find((c) => c.startsWith("cartId="));
+        return cartIdCookie ? cartIdCookie.split("=")[1] : null;
+    };
+
+    const setCartIdInCookie = (cartId) => {
+        document.cookie = `cartId=${cartId};path=/;max-age=604800`; // 7 jours
+    };
 
     const [isLoading, setIsLoading] = useState(false);
 
-    // Charger les données du panier depuis le backend
     useEffect(() => {
-        if (show) {
+        const fetchCart = async () => {
+            if (!show) return;
+
             setIsLoading(true);
-            fetch(`http://localhost:8090/carts/12`)
-                .then((response) => response.json())
-                .then((data) => {
-                    setCart(data); // Stockez tout l'objet JSON retourné
-                    updateCartItemCount(data.numberOfProducts);
-                })
-                .catch((error) => console.error('Erreur lors du chargement du panier:', error))
-                .finally(() => setIsLoading(false));
-        }
-    }, [show, cartId, updateCartItemCount]);
+            let cartIdToLoad = getCartIdFromCookie();
+
+            if (!cartIdToLoad) {
+                console.log("Aucun panier existant, création d'un nouveau panier...");
+                try {
+                    const createCartResponse = await fetch("http://localhost:8090/carts", { method: "POST" });
+                    if (!createCartResponse.ok) {
+                        throw new Error("Erreur lors de la création du panier");
+                    }
+                    const newCart = await createCartResponse.json();
+                    cartIdToLoad = newCart.cartID;
+                    setCartIdInCookie(cartIdToLoad);
+                    setCart(newCart);
+                } catch (error) {
+                    console.error("Erreur lors de la création du panier :", error);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            try {
+                console.log(`Chargement du panier avec l'ID : ${cartIdToLoad}`);
+                const response = await fetch(`http://localhost:8090/carts/${cartIdToLoad}`);
+                if (!response.ok) {
+                    throw new Error("Erreur lors du chargement du panier");
+                }
+                const data = await response.json();
+                setCart(data);
+                updateCartItemCount(data.numberOfProducts || 0);
+            } catch (error) {
+                console.error("Erreur lors du chargement du panier :", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchCart();
+    }, [show, updateCartItemCount]);
+
+
+
 
     const updateQuantity = (idProduct, newQuantity) => {
         fetch(`http://localhost:8090/carts/${cart.cartID}/products/${idProduct}`, {
@@ -46,8 +87,8 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
                 return response.json();
             })
             .then((updatedCart) => {
-                setCart(updatedCart);
-                updateCartItemCount(updatedCart.numberOfProducts);
+                setCart(updatedCart); // Mettre à jour le panier avec les données renvoyées par l'API
+                updateCartItemCount(updatedCart.numberOfProducts); // Mettre à jour le compteur
             })
             .catch((error) => console.error('Erreur lors de la mise à jour de la quantité:', error));
     };
@@ -61,15 +102,31 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
                     if (!response.ok) {
                         throw new Error('Erreur lors de la suppression du produit.');
                     }
+                    // Si le statut est 204, ne pas tenter de parser du JSON
+                    if (response.status === 204) {
+                        return null; // Aucun contenu
+                    }
                     return response.json();
                 })
                 .then((updatedCart) => {
-                    setCart(updatedCart); // Mettre à jour l'état local
-                    updateCartItemCount(updatedCart.numberOfProducts);
+                    if (updatedCart) {
+                        setCart(updatedCart); // Mettre à jour l'état local si des données sont renvoyées
+                        updateCartItemCount(updatedCart.numberOfProducts); // Mettre à jour le compteur
+                    } else {
+                        // Si le panier est vide
+                        setCart({
+                            cartID: cart.cartID,
+                            numberOfProducts: 0,
+                            cartProducts: [],
+                            cartTotalPrice: 0,
+                        });
+                        updateCartItemCount(0);
+                    }
                 })
-                .catch((error) => console.error('Erreur lors de la suppression:', error));
+                .catch((error) => console.error('Erreur lors de la suppression :', error));
         }
     };
+
 
     if (!show) return null;
 

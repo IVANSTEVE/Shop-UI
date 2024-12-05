@@ -1,7 +1,7 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import { Navbar, Nav, Button, Container } from "react-bootstrap";
+import {Navbar, Nav, Button, Container} from "react-bootstrap";
 import './App.css';
 import useSWR from "swr";
 import logo from './Logo_t_shirt_bis.png';
@@ -13,10 +13,10 @@ import HomeScreen from './HomeScreen';
 import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
+import {getCookie} from './utils';
 //import AboutText from './components/AboutText';
 //import Apropos from './components/Apropos';
 //import Faq from './components/Faq';
-
 
 const fetcher = async (url) => {
     const response = await fetch(url);
@@ -25,6 +25,7 @@ const fetcher = async (url) => {
     }
     return response.json();
 };
+
 const categoryLabels = {
     MEN: "Hommes",
     WOMEN: "Femmes",
@@ -35,7 +36,7 @@ const categoryLabels = {
 function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const { data: categories, error: categoriesError } = useSWR('http://localhost:8090/categories', fetcher);
+    const {data: categories, error: categoriesError} = useSWR('http://localhost:8090/categories', fetcher);
     const [cart, setCart] = useState({
         cartID: null, // ID du panier, par défaut null
         userId: null, // Utilisateur lié, par défaut null
@@ -46,21 +47,50 @@ function App() {
     });
     const [showCart, setShowCart] = useState(false); // État pour afficher le modal*/
     const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
+    const initialized = useRef(false); // Utilisation de useRef pour stocker l’état mutable
+
 
     useEffect(() => {
-        const fetchCart = async () => {
-            try {
-                const response = await fetch('http://localhost:8090/carts/12');
-                const data = await response.json();
-                setCart(data); // Met à jour le panier avec les données retournées
-                setCartItemCount(data.numberOfProducts || 0); // Met à jour le compteur
-            } catch (error) {
-                console.error("Erreur lors de la récupération du panier:", error);
+        const initializeCart = async () => {
+            if (initialized.current) return; // Vérifie si l’état est déjà initialisé
+            initialized.current = true; // Marque comme initialisé
+
+            let cartId = getCookie('cartId');
+
+            if (cartId) {
+                try {
+                    console.log(`Chargement du panier avec l'ID : ${cartId}`);
+                    const response = await fetch(`http://localhost:8090/carts/${cartId}`);
+                    if (!response.ok) {
+                        throw new Error("Erreur lors de la récupération du panier");
+                    }
+                    const data = await response.json();
+                    setCart(data);
+                    setCartItemCount(data.numberOfProducts || 0);
+                } catch (error) {
+                    console.error("Erreur lors de la récupération du panier :", error);
+                }
+            } else {
+                try {
+                    console.log("Aucun panier trouvé. Création d'un nouveau panier...");
+                    const response = await fetch("http://localhost:8090/carts", {method: "POST"});
+                    if (!response.ok) {
+                        throw new Error("Erreur lors de la création du panier");
+                    }
+                    const newCart = await response.json();
+                    setCart(newCart);
+                    setCartItemCount(0);
+                    document.cookie = `cartId=${newCart.cartID};path=/;max-age=604800`; // 7 jours
+                    console.log(`Nouveau panier créé avec l'ID : ${newCart.cartID}`);
+                } catch (error) {
+                    console.error("Erreur lors de la création du panier :", error);
+                }
             }
         };
 
-        fetchCart(); // Appelle la fonction lors du chargement
-    }, []);
+        initializeCart();
+    }, []); // Pas de dépendances supplémentaires nécessaires
+
 
     const toggleAuth = () => {
         setShowAuth(!showAuth);
@@ -75,6 +105,7 @@ function App() {
         setSelectedCategory(null); // Réinitialiser la catégorie sélectionnée
         setSelectedProduct(null); // Réinitialiser le produit sélectionné
     };
+
     const [showAuth, setShowAuth] = useState(false);
 
     return (
@@ -89,7 +120,7 @@ function App() {
             >
                 <div className="header-overlay"></div>
                 <div className="header-content">
-                    <img src={logo} alt="Logo" className="logo" />
+                    <img src={logo} alt="Logo" className="logo"/>
                     <h1 className="site-title">T-SHIRT SHOP</h1>
                 </div>
             </header>
@@ -97,11 +128,11 @@ function App() {
             <Navbar bg="dark" variant="dark" expand="lg" className="main-navbar">
                 <Container className="justify-content-center">
                     <Navbar.Brand onClick={() => setSelectedCategory(null)}
-                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                        <i className="bi bi-house-heart" style={{ fontSize: '1.5rem', marginRight: '8px' }}></i>
+                                  style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
+                        <i className="bi bi-house-heart" style={{fontSize: '1.5rem', marginRight: '8px'}}></i>
                         HOME
                     </Navbar.Brand>
-                    <Navbar.Toggle aria-controls="basic-navbar-nav" />
+                    <Navbar.Toggle aria-controls="basic-navbar-nav"/>
                     <Navbar.Collapse id="basic-navbar-nav" className="justify-content-center">
                         <Nav className="d-flex gap-3">
                             <Button
@@ -137,12 +168,13 @@ function App() {
                             )}
                             <Button
                                 variant="outline-light"
-                                style={{ position: 'relative' }}
-                                onClick={toggleCart} // Appelle toggleCart au clic  {() => console.log("Ouverture du panier")}
+                                style={{position: 'relative'}}
+                                onClick={toggleCart}
                             >
-                                <i className="bi bi-cart-check" style={{ fontSize: '1.0rem', marginRight: '2px' }}></i>
+                                <i className="bi bi-cart-check" style={{fontSize: '1.0rem', marginRight: '2px'}}></i>
                                 Panier
-                                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                <span
+                                    className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                                     {cartItemCount}
                                     <span className="visually-hidden">articles dans le panier</span>
                                 </span>
@@ -152,15 +184,11 @@ function App() {
                             </Button>
                         </Nav>
                     </Navbar.Collapse>
-
                 </Container>
             </Navbar>
-
             {/* Affichage conditionnel des composants selon la sélection */}
             <main className="content">
-                {showAuth && (
-                    <AuthForm onHide={() => setShowAuth(false)} />
-                )}
+                {showAuth && <AuthForm onHide={() => setShowAuth(false)}/>}
                 {!showAuth && showCart && (
                     <CartDrawer
                         cartId={cart.cartID}
@@ -188,6 +216,7 @@ function App() {
                         setCart={setCart}
                         showCart={showCart}
                         setShowCart={setShowCart}
+                        setCartItemCount={setCartItemCount}
                     />
                 )}
                 {!showAuth && !showCart && !selectedCategory && !selectedProduct && (
@@ -199,8 +228,7 @@ function App() {
                     />
                 )}
             </main>
-
-            <Footer />
+            <Footer/>
         </div>
     );
 }
