@@ -14,6 +14,7 @@ import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
 import {getCookie} from './utils';
+import CookieConsent from 'react-cookie-consent';
 //import AboutText from './components/AboutText';
 //import Apropos from './components/Apropos';
 //import Faq from './components/Faq';
@@ -268,6 +269,36 @@ function App() {
                 )}
             </main>
             <Footer/>
+            {/* Composant CookieConsent */}
+            <CookieConsent
+                location="bottom" // Position en bas de la page
+                buttonText="Accepter"
+                declineButtonText="Refuser"
+                enableDeclineButton // Active le bouton de refus
+                onAccept={() => console.log("Cookies acceptés")} // Action lors de l'acceptation
+                onDecline={() => console.log("Cookies refusés")} // Action lors du refus
+                cookieName="userCookieConsent" // Nom du cookie pour enregistrer la décision
+                style={{
+                    background: "#2B373B",
+                    color: "#ffffff",
+                    textAlign: "center"
+                }} // Style du container
+                buttonStyle={{
+                    background: "#4CAF50",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    borderRadius: "5px",
+                }} // Style du bouton d'acceptation
+                declineButtonStyle={{
+                    background: "#f44336",
+                    color: "#ffffff",
+                    fontSize: "13px",
+                    borderRadius: "5px",
+                }} // Style du bouton de refus
+            >
+                Nous utilisons des cookies pour améliorer votre expérience utilisateur. En acceptant, vous consentez à
+                notre utilisation des cookies.
+            </CookieConsent>
         </div>
     );
 }
