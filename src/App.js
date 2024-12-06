@@ -119,7 +119,7 @@ function App() {
         }
     }, []); // Exécute seulement une fois au chargement de l'application
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         // Supprimer le token et l'utilisateur local
         localStorage.removeItem('token');
         setUser(null); // Réinitialise l'utilisateur
@@ -139,7 +139,22 @@ function App() {
         // Supprimer le cookie du panier
         document.cookie = 'cartId=; Max-Age=0; path=/'; // Supprime le cookie 'cartId'
 
-        // Masquer les autres modaux
+        //Recreer un panier
+        try {
+            console.log("Aucun panier trouvé. Création d'un nouveau panier...");
+            const response = await fetch("http://localhost:8090/carts", { method: "POST" });
+            if (!response.ok) {
+                throw new Error("Erreur lors de la création du panier");
+            }
+            const newCart = await response.json();
+            setCart(newCart);  // Met à jour l'état du panier
+            setCartItemCount(0);  // Remet à zéro le nombre d'articles
+            // Créer un nouveau cookie avec l'ID du panier
+            document.cookie = `cartId=${newCart.cartID};path=/;max-age=604800`; // 7 jours
+            console.log(`Nouveau panier créé avec l'ID : ${newCart.cartID}`);
+        } catch (error) {
+            console.error("Erreur lors de la création du panier :", error);
+        }
         setShowAuth(false); // Ferme la fenêtre de connexion si elle est ouverte
         setShowCart(false); // Ferme le panier si il est ouvert
     };
@@ -227,7 +242,7 @@ function App() {
                             {user ? (
                                 <>
             <span className="navbar-text text-light me-3">
-                Bienvenue, {user.userName} !
+                Bienvenue, {user.userSurname} !
             </span>
                                     <Button variant="outline-danger" onClick={handleLogout}>
                                         Déconnexion
@@ -235,7 +250,7 @@ function App() {
                                 </>
                             ) : (
                                 <Button variant="outline-light" onClick={toggleAuth}>
-                                    Login / Register
+                                    Connexion / Inscription
                                 </Button>
                             )}
                         </Nav>
