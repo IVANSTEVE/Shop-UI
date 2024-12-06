@@ -30,7 +30,7 @@ function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCou
             }
 
             const updatedCart = await addProductResponse.json();
-            alert(`Produit ajouté au panier ${updatedCart.cartID}`);
+            alert(`Produit ajouté au panier`);
             setCart(updatedCart);
             setCartItemCount(updatedCart.numberOfProducts || 0);
             // Rediriger vers le panier
@@ -51,20 +51,27 @@ function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCou
                     <Card.Header>
                         <h2>{data.productName}</h2>
                     </Card.Header>
-                    <Card.Img variant="top" src={data.imageURL || '/placeholder.jpg'} />
-                    <Card.Body>
-                        <Card.Text>Prix : {data.price} €</Card.Text>
-                        <Button variant="primary" onClick={addToCart}>
-                            Ajouter au panier
-                        </Button>
-                        <Button variant="secondary" onClick={() => setSelectedProduct(null)}>
-                            Retour
-                        </Button>
-                    </Card.Body>
+                    <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}}>
+                        <Card.Img
+                            variant="top"
+                            src={data.imageURL || '/placeholder.jpg'}
+                            style={{width: '500px', height: '500px'}}
+                        />
+                    </div>
+                        <Card.Body>
+                            <Card.Text><strong>Marque :</strong> {data.brandName}</Card.Text>
+                            <Card.Text>Prix : {data.price} €</Card.Text>
+                            <Button variant="primary" onClick={addToCart}>
+                                Ajouter au panier
+                            </Button>
+                            <Button variant="secondary" onClick={() => setSelectedProduct(null)}>
+                                Retour
+                            </Button>
+                        </Card.Body>
                 </Card>
             </Col>
         </Row>
-    );
+);
 }
 
 export default ProductDetails;
