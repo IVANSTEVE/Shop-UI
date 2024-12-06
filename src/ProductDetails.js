@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { Button, Card, Col, Row } from 'react-bootstrap';
 import {getCookie} from "./utils";
 
-function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCount }) {
+function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCount, setShowCart }) {
     const fetcher = (url) => fetch(url).then((res) => res.json());
     const { data, error } = useSWR(`http://localhost:8090/products/${productId}`, fetcher);
 
@@ -33,6 +33,9 @@ function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCou
             alert(`Produit ajouté au panier ${updatedCart.cartID}`);
             setCart(updatedCart);
             setCartItemCount(updatedCart.numberOfProducts || 0);
+            // Rediriger vers le panier
+            setShowCart(true); // Affiche le panier
+            setSelectedProduct(null);
         } catch (error) {
             console.error("Erreur :", error.message);
             alert("Impossible d'ajouter le produit au panier. Veuillez réessayer.");

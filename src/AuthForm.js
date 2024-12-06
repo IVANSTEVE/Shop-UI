@@ -10,8 +10,10 @@ function AuthForm({ onHide, setUser }) {
         password: '',
         confirmPassword: '',
         address: '',
-        city: ''
+        city: '',
+        codePostal: '', // Nouveau champ
     });
+
     const [error, setError] = useState(null);
 
     const handleChange = (e) => {
@@ -22,20 +24,38 @@ function AuthForm({ onHide, setUser }) {
     const handleRegister = async (e) => {
         e.preventDefault();
 
-        // // Validation des champs
-        // if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
-        //     setError("Tous les champs sont requis");
-        //     return;
-        // }
-        // if (formData.password !== formData.confirmPassword) {
-        //     setError("Les mots de passe ne correspondent pas");
-        //     return;
-        // }
+
+        // Validation JavaScript
+        if (formData.password !== formData.confirmPassword) {
+            setError("Les mots de passe ne correspondent pas");
+            return;
+        }
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+        if (!emailRegex.test(formData.email)) {
+            setError("Veuillez entrer une adresse email valide.");
+            return;
+        }
+        const nameRegex = /^[a-zA-Z]{3,}$/;
+
+        if (!nameRegex.test(formData.userName)) {
+            setError("Le nom doit contenir au moins 3 lettres.");
+            return;
+        }
+
+        if (!nameRegex.test(formData.userSurname)) {
+            setError("Le prénom doit contenir au moins 3 lettres.");
+            return;
+        }
+        if (!/^\d{4}$/.test(formData.codePostal)) {
+            setError("Le code postal doit contenir exactement 4 chiffres.");
+            return;
+        }
 
         try {
             const response = await fetch('http://localhost:8090/auth/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     userName: formData.userName,
                     userSurname: formData.userSurname,
@@ -43,12 +63,13 @@ function AuthForm({ onHide, setUser }) {
                     password: formData.password,
                     address: formData.address,
                     city: formData.city,
+                    codePostal: formData.codePostal,
                 }),
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Erreur lors de l\'inscription');
+                const errorData = await response.text(); // Lire la réponse texte
+                throw new Error(errorData); // Lever une exception avec le message du serveur
             }
 
             const data = await response.json();
@@ -56,7 +77,7 @@ function AuthForm({ onHide, setUser }) {
 
             // Appeler immédiatement /me pour récupérer les infos utilisateur
             const userResponse = await fetch('http://localhost:8090/auth/me', {
-                headers: { Authorization: `Bearer ${data.token}` },
+                headers: {Authorization: `Bearer ${data.token}`},
             });
 
             if (!userResponse.ok) {
@@ -66,9 +87,11 @@ function AuthForm({ onHide, setUser }) {
             const userData = await userResponse.json();
             setUser(userData); // Mettre à jour l'état utilisateur
             onHide(); // Fermer le formulaire
-        } catch (err) {
-            setError(err.message);
         }
+        catch (errorData) {
+                const errorResponse = JSON.parse(errorData.message); // Convertit le JSON en objet
+                setError(errorResponse.error || "Une erreur est survenue."); // Affiche uniquement "Email déjà utilisé."
+            }
     };
 
     const handleLogin = async (e) => {
@@ -125,7 +148,23 @@ function AuthForm({ onHide, setUser }) {
             setError(err.message);
         }
     };
-
+    const resetFormData = () => {
+        setFormData({
+            userName: '',
+            userSurname: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            address: '',
+            city: '',
+            codePostal: '',
+        });
+        setError(null);
+    };
+    const toggleMode = (mode) => {
+        setIsLoginMode(mode); // Change le mode
+        resetFormData(); // Réinitialise le formulaire
+    };
     return (
         <div className="auth-form-container">
             <div className="formWrapper">
@@ -133,50 +172,115 @@ function AuthForm({ onHide, setUser }) {
                     <div className="card-header">
                         <div
                             className={`form-header ${isLoginMode ? 'active' : ''}`}
-                            onClick={() => setIsLoginMode(true)}
+                                onClick={() => toggleMode(true)}
                         >
                             Se connecter
                         </div>
                         <div
                             className={`form-header ${!isLoginMode ? 'active' : ''}`}
-                            onClick={() => setIsLoginMode(false)}
+                                onClick={() => toggleMode(false)}
                         >
                             S'inscrire
                         </div>
                     </div>
                     <div className="card-body">
-                        {error && <div className="error-message">{error}</div>}
+                        {error && (
+                            <div className="error-message">
+                                <p>{error}</p>
+                            </div>
+                        )}
                         {isLoginMode ? (
                             <form id="loginForm" onSubmit={handleLogin}>
                                 <input type="text" name="email" className="form-control" placeholder="Email" onChange={handleChange}/>
                                 <input type="password" name="password" className="form-control" placeholder="Mot de passe" onChange={handleChange}/>
-                                <label>
-                                    <input type="checkbox" className="form-check" />
-                                    Se Souvenir de moi
-                                </label>
                                 <button type="submit" className="formButton">Connexion</button>
                                 <hr />
                                 <button onClick={onHide} type="button" className="formButton2">Fermer</button>
                             </form>
                         ) : (
                             <form id="registerForm" onSubmit={handleRegister}>
-                                <input type="text" name="userName" className="form-control" placeholder="Nom" onChange={handleChange}/>
-                                <input type="text" name="userSurname" className="form-control" placeholder="Prénom" onChange={handleChange}/>
-                                <input type="email" name="email" className="form-control" placeholder="Email" onChange={handleChange}/>
-                                <input type="password" name="password" className="form-control" placeholder="Mot de passe" onChange={handleChange}/>
-                                <input type="password" name="confirmPassword" className="form-control" placeholder="Confirmer le mot de passe" onChange={handleChange}/>
-                                <input type="text" name="address" className="form-control" placeholder="Adresse"
-                                       onChange={handleChange}/>
-                                <input type="text" name="city" className="form-control" placeholder="Ville"
-                                       onChange={handleChange}/>
-                                <label>
-                                    <input type="checkbox" className="form-check" />
-                                    J'accepte les termes de l'accord
-                                </label>
+                                <input
+                                    type="text"
+                                    name="userName"
+                                    className="form-control"
+                                    placeholder="Nom"
+                                    required
+                                    pattern="^[a-zA-Z]{3,}$"
+                                    title="Le nom doit contenir au moins 3 lettres."
+                                    value={formData.userName}
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    type="text"
+                                    name="userSurname"
+                                    className="form-control"
+                                    placeholder="Prénom"
+                                    required
+                                    pattern="^[a-zA-Z]{3,}$"
+                                    title="Le prénom doit contenir au moins 3 lettres."
+                                    value={formData.userSurname}
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    className="form-control"
+                                    placeholder="exemple@domaine.com"
+                                    required
+                                    pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                                    title="Veuillez entrer une adresse email valide (ex. exemple@domain.com)"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    type="password"
+                                    name="password"
+                                    className="form-control"
+                                    placeholder="Mot de passe"
+                                    required
+                                    minLength="6" // Validation supplémentaire pour un mot de passe minimum
+                                    title="Le mot de passe doit contenir au moins 6 caractères."
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    type="password"
+                                    name="confirmPassword"
+                                    className="form-control"
+                                    placeholder="Confirmer le mot de passe"
+                                    required
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    type="text"
+                                    name="address"
+                                    className="form-control"
+                                    placeholder="Adresse"
+                                    required
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    type="text"
+                                    name="city"
+                                    className="form-control"
+                                    placeholder="Ville"
+                                    required
+                                    onChange={handleChange}
+                                />
+                                <input
+                                    type="text"
+                                    name="codePostal"
+                                    className="form-control"
+                                    placeholder="Code Postal"
+                                    required
+                                    pattern="\d{4}" // Validation pour un code postal de 4 chiffres
+                                    title="Le code postal doit contenir exactement 4 chiffres."
+                                    onChange={handleChange}
+                                />
                                 <button type="submit" className="formButton">Inscription</button>
-                                <hr />
-                                <button onClick={onHide} type="button" className="formButton2">Fermer</button>
                             </form>
+
+
                         )}
                     </div>
                 </div>
