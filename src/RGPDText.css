@@ -1,0 +1,45 @@
+.rgpd-container {
+    font-family: Arial, sans-serif;
+    margin: 0 auto;
+    padding: 20px;
+    max-width: 800px;
+}
+
+.rgpd-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.rgpd-header h1 {
+    font-size: 2rem;
+    color: #333;
+}
+
+.rgpd-section {
+    margin-bottom: 20px;
+}
+
+.rgpd-section h2 {
+    font-size: 1.5rem;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.rgpd-section p, .rgpd-section ul {
+    font-size: 1rem;
+    color: #555;
+}
+
+.rgpd-section ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+.rgpd-section a {
+    /*color: #007bff;*/
+    /*text-decoration: none;*/
+}
+
+.rgpd-section a:hover {
+    /*text-decoration: underline;*/
+}

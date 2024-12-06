@@ -15,9 +15,11 @@ import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
 import {getCookie} from './utils';
 import CookieConsent from 'react-cookie-consent';
-//import AboutText from './components/AboutText';
-//import Apropos from './components/Apropos';
-//import Faq from './components/Faq';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import FaqText from './FaqText';
+import ContactText from './ContactText';
+import AboutText from './AboutText';
+import RGPDText from './RGPDText';
 
 
 
@@ -118,10 +120,30 @@ function App() {
     }, []); // Exécute seulement une fois au chargement de l'application
 
     const handleLogout = () => {
-        localStorage.removeItem('token'); // Supprime le token
-        setUser(null); // Réinitialise immédiatement l'utilisateur
-        setShowAuth(false); // Assurez-vous que l'authentification est masquée
+        // Supprimer le token et l'utilisateur local
+        localStorage.removeItem('token');
+        setUser(null); // Réinitialise l'utilisateur
+
+        // Réinitialiser l'état du panier
+        setCart({
+            cartID: null,
+            userId: null,
+            cartProducts: [],
+            cartTotalPrice: 0,
+            cartTotalPriceExcludingVAT: 0,
+            numberOfProducts: 0,
+        });
+
+        setCartItemCount(0); // Mettre à jour le compteur du panier
+
+        // Supprimer le cookie du panier
+        document.cookie = 'cartId=; Max-Age=0; path=/'; // Supprime le cookie 'cartId'
+
+        // Masquer les autres modaux
+        setShowAuth(false); // Ferme la fenêtre de connexion si elle est ouverte
+        setShowCart(false); // Ferme le panier si il est ouvert
     };
+
 
     const toggleAuth = () => {
         setShowAuth(!showAuth);
@@ -140,6 +162,7 @@ function App() {
     const [showAuth, setShowAuth] = useState(false);
 
     return (
+        <Router>
         <div className="background">
             {/* Header avec overlay pour l'image */}
             <header
@@ -267,6 +290,12 @@ function App() {
                         fetcher={fetcher}
                     />
                 )}
+                <Routes>
+                    <Route path="/FaqText" element={<FaqText />} />
+                    <Route path="/ContactText" element={<ContactText />} />
+                    <Route path="/AboutText" element={<AboutText />} />
+                    <Route path="/RGPDText" element={<RGPDText />} />
+                </Routes>
             </main>
             <Footer/>
             {/* Composant CookieConsent */}
@@ -300,6 +329,7 @@ function App() {
                 notre utilisation des cookies.
             </CookieConsent>
         </div>
+        </Router>
     );
 }
 
