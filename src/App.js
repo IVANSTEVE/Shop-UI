@@ -234,6 +234,8 @@ function App() {
                         show={showCart}
                         onHide={() => setShowCart(false)}
                         updateCartItemCount={(count) => setCartItemCount(count)}
+                        setSelectedProduct={setSelectedProduct}
+                        setSelectedCategory={setSelectedCategory}
                     />
                 )}
                 {!showAuth && !showCart && selectedCategory && !selectedProduct && (
@@ -244,7 +246,7 @@ function App() {
                         categoryLabels={categoryLabels}
                     />
                 )}
-                {!showAuth && !showCart && selectedCategory && selectedProduct && (
+                {!showAuth && !showCart && selectedProduct && (
                     <ProductDetails
                         productId={selectedProduct}
                         setSelectedProduct={setSelectedProduct}

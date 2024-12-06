@@ -3,7 +3,7 @@ import { Card, Table, Form, Button, Spinner } from 'react-bootstrap';
 import './Card.css'; // Pour le style du panier
 import { useState, useEffect } from 'react';
 
-function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
+function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProduct, setSelectedCategory }) {
 
     const [cart, setCart] = useState({
         cartID: null, // ID du panier, par défaut null
@@ -160,7 +160,18 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
                                 cart.cartProducts.map((item, index) => (
                                     <tr key={item.id}>
                                         <td>{index + 1}</td>
-                                        <td>{item.productName}</td>
+                                        <td>
+                                            <Button
+                                                variant="link"
+                                                onClick={() => {
+                                                    setSelectedProduct(item.productId); // Naviguer vers la page des détails
+                                                    setSelectedCategory(null);
+                                                    onHide(); // Fermer le panier
+                                                }}
+                                            >
+                                                {item.productName}
+                                            </Button>
+                                        </td>
                                         <td>
                                             <Form.Select
                                                 size="sm"
@@ -197,6 +208,7 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount }) {
                                 </tr>
                             )}
                             </tbody>
+
                         </Table>
                         <div className="mt-3 text-end">
                             <h5>
