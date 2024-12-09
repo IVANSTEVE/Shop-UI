@@ -44,7 +44,7 @@ function App() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const {data: categories, error: categoriesError} = useSWR('http://localhost:8090/categories', fetcher);
     const [cart, setCart] = useState({
-        cartID: null, // ID du panier, par défaut null
+        cartId: null, // ID du panier, par défaut null
         userId: null, // Utilisateur lié, par défaut null
         cartProducts: [], // Liste des produits, par défaut vide
         cartTotalPrice: 0, // Prix total TTC, par défaut 0
@@ -86,8 +86,8 @@ function App() {
                     const newCart = await response.json();
                     setCart(newCart);
                     setCartItemCount(0);
-                    document.cookie = `cartId=${newCart.cartID};path=/;max-age=604800`; // 7 jours
-                    console.log(`Nouveau panier créé avec l'ID : ${newCart.cartID}`);
+                    document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`; // 7 jours
+                    console.log(`Nouveau panier créé avec l'ID : ${newCart.cartId}`);
                 } catch (error) {
                     console.error("Erreur lors de la création du panier :", error);
                 }
@@ -126,7 +126,7 @@ function App() {
 
         // Réinitialiser l'état du panier
         setCart({
-            cartID: null,
+            cartId: null,
             userId: null,
             cartProducts: [],
             cartTotalPrice: 0,
@@ -150,8 +150,8 @@ function App() {
             setCart(newCart);  // Met à jour l'état du panier
             setCartItemCount(0);  // Remet à zéro le nombre d'articles
             // Créer un nouveau cookie avec l'ID du panier
-            document.cookie = `cartId=${newCart.cartID};path=/;max-age=604800`; // 7 jours
-            console.log(`Nouveau panier créé avec l'ID : ${newCart.cartID}`);
+            document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`; // 7 jours
+            console.log(`Nouveau panier créé avec l'ID : ${newCart.cartId}`);
         } catch (error) {
             console.error("Erreur lors de la création du panier :", error);
         }
@@ -267,7 +267,7 @@ function App() {
                 )}
                 {!showAuth && showCart && (
                     <CartDrawer
-                        cartId={cart.cartID}
+                        cartId={cart.cartId}
                         cart={cart}
                         setCart={setCart}
                         show={showCart}

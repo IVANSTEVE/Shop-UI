@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProduct, setSelectedCategory }) {
 
     const [cart, setCart] = useState({
-        cartID: null, // ID du panier, par défaut null
+        cartId: null, // ID du panier, par défaut null
         userId: null, // Utilisateur lié, par défaut null
         cartProducts: [], // Liste des produits, par défaut vide
         cartTotalPrice: 0, // Prix total TTC, par défaut 0
@@ -40,7 +40,7 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
                         throw new Error("Erreur lors de la création du panier");
                     }
                     const newCart = await createCartResponse.json();
-                    cartIdToLoad = newCart.cartID;
+                    cartIdToLoad = newCart.cartId;
                     setCartIdInCookie(cartIdToLoad);
                     setCart(newCart);
                 } catch (error) {
@@ -73,7 +73,7 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
 
 
     const updateQuantity = (idProduct, newQuantity) => {
-        fetch(`http://localhost:8090/carts/${cart.cartID}/products/${idProduct}`, {
+        fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
 
     const removeFromCart = (idProduct) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
-            fetch(`http://localhost:8090/carts/${cart.cartID}/products/${idProduct}`, {
+            fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
                 method: 'DELETE',
             })
                 .then((response) => {
@@ -115,7 +115,7 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
                     } else {
                         // Si le panier est vide
                         setCart({
-                            cartID: cart.cartID,
+                            cartId: cart.cartId,
                             numberOfProducts: 0,
                             cartProducts: [],
                             cartTotalPrice: 0,
