@@ -1,5 +1,5 @@
-export function getCookie(name) {
+export const getCartIdFromCookie = () => {
     const cookies = document.cookie.split("; ");
-    const cookie = cookies.find((c) => c.startsWith(`${name}=`));
-    return cookie ? cookie.split("=")[1] : null;
-}
+    const cartIdCookie = cookies.find((c) => c.startsWith("cartId="));
+    return cartIdCookie ? cartIdCookie.split("=")[1] : null;
+};
