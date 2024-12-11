@@ -14,7 +14,7 @@ function AuthForm({ onHide, setUser, setShowCart }) {
         confirmPassword: '',
         address: '',
         city: '',
-        codePostal: '',
+        postalCode: '',
     });
 
     // Réinitialiser les données du formulaire
@@ -27,7 +27,7 @@ function AuthForm({ onHide, setUser, setShowCart }) {
             confirmPassword: '',
             address: '',
             city: '',
-            codePostal: '',
+            postalCode: '',
         });
         setError(null);
     };
@@ -70,7 +70,7 @@ function AuthForm({ onHide, setUser, setShowCart }) {
             setError("Le prénom doit contenir au moins 3 lettres.");
             return;
         }
-        if (!/^\d{4}$/.test(formData.codePostal)) {
+        if (!/^\d{4}$/.test(formData.postalCode)) {
             setError("Le code postal doit contenir exactement 4 chiffres.");
             return;
         }
@@ -88,7 +88,7 @@ function AuthForm({ onHide, setUser, setShowCart }) {
                     password: formData.password,
                     address: formData.address,
                     city: formData.city,
-                    codePostal: formData.codePostal,
+                    postalCode: formData.postalCode,
                 }),
             });
 
@@ -286,7 +286,7 @@ function AuthForm({ onHide, setUser, setShowCart }) {
                                 />
                                 <input
                                     type="text"
-                                    name="codePostal"
+                                    name="postalCode"
                                     className="form-control"
                                     placeholder="Code Postal"
                                     required
