@@ -1,84 +1,112 @@
-import React from 'react';
-import { Card, Table, Form, Button, Spinner } from 'react-bootstrap';
-import './Card.css'; // Pour le style du panier
-import { useState, useEffect } from 'react';
+import React, {useRef} from 'react';
+import {Card, Table, Form, Button, Spinner} from 'react-bootstrap';
+import './Card.css';
+import {useState, useEffect} from 'react';
 
-function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProduct, setSelectedCategory }) {
-
-    const [cart, setCart] = useState({
-        cartId: null, // ID du panier, par défaut null
-        userId: null, // Utilisateur lié, par défaut null
-        cartProducts: [], // Liste des produits, par défaut vide
-        cartTotalPrice: 0, // Prix total TTC, par défaut 0
-        cartTotalPriceExcludingVAT: 0, // Prix total HT, par défaut 0
-        numberOfProducts: 0, // Nombre total de produits, par défaut 0
-    });
-    const getCartIdFromCookie = () => {
-        const cookies = document.cookie.split("; ");
-        const cartIdCookie = cookies.find((c) => c.startsWith("cartId="));
-        return cartIdCookie ? cartIdCookie.split("=")[1] : null;
-    };
-
-    const setCartIdInCookie = (cartId) => {
-        document.cookie = `cartId=${cartId};path=/;max-age=604800`; // 7 jours
-    };
-
+function CartDrawer({cart, setCart, show, onHide, updateCartItemCount, setSelectedProduct, setSelectedCategory}) {
     const [isLoading, setIsLoading] = useState(false);
+    const fetchCalledOnce = useRef(false); // Drapeau pour empêcher la double exécution stricte
 
+    // Utiliser un effet pour charger le panier une seule fois
     useEffect(() => {
+        // Fonction pour charger le panier
         const fetchCart = async () => {
-            if (!show) return;
-
-            setIsLoading(true);
-            let cartIdToLoad = getCartIdFromCookie();
-
-            if (!cartIdToLoad) {
-                console.log("Aucun panier existant, création d'un nouveau panier...");
-                try {
-                    const createCartResponse = await fetch("http://localhost:8090/carts", { method: "POST" });
-                    if (!createCartResponse.ok) {
-                        throw new Error("Erreur lors de la création du panier");
-                    }
-                    const newCart = await createCartResponse.json();
-                    cartIdToLoad = newCart.cartId;
-                    setCartIdInCookie(cartIdToLoad);
-                    setCart(newCart);
-                } catch (error) {
-                    console.error("Erreur lors de la création du panier :", error);
-                    setIsLoading(false);
-                    return;
-                }
+            // Si le panier n'est pas affiché, ne pas exécuter
+            if (!show) {
+                return;
+            }
+            // Si déjà exécuté, ne pas exécuter
+            if (fetchCalledOnce.current) {
+                return;
             }
 
+            fetchCalledOnce.current = true; // Défini comme exécuté pour éviter les doubles appels
+            setIsLoading(true);
+
+            // Fonction asynchrone pour charger le panier
             try {
-                console.log(`Chargement du panier avec l'ID : ${cartIdToLoad}`);
-                const response = await fetch(`http://localhost:8090/carts/${cartIdToLoad}`);
-                if (!response.ok) {
-                    throw new Error("Erreur lors du chargement du panier");
+                // Récupérer les infos utilisateur
+                const authResponse = await fetch("http://localhost:8090/auth/me", {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("token")}`, // Utiliser le token
+                    },
+                });
+
+                // Si l'utilisateur est connecté et a un panier
+                if (authResponse.ok) {
+                    const user = await authResponse.json();
+
+                    if (user.cartId) {
+                        // Charger le panier de l'utilisateur
+                        const response = await fetch(`http://localhost:8090/carts/${user.cartId}`);
+                        if (!response.ok) {
+                            throw new Error("Erreur lors du chargement du panier utilisateur.");
+                        }
+                        const userCart = await response.json();
+
+                        // Mettre à jour le panier et le compteur
+                        setCart(userCart);
+                        updateCartItemCount(userCart.numberOfProducts || 0);
+                        return;
+                    }
                 }
-                const data = await response.json();
-                setCart(data);
-                updateCartItemCount(data.numberOfProducts || 0);
+
+                // Si pas de cartId pour l'utilisateur ou requête échouée, utiliser le cookie
+
+                // Récupérer le cartId depuis les cookies
+                const cookieCartId = document.cookie
+                    .split("; ")
+                    .find((row) => row.startsWith("cartId="))
+                    ?.split("=")[1];
+
+                // Si un cartId est trouvé dans les cookies
+                if (cookieCartId) {
+                    // Charger le panier depuis le cookie
+                    const response = await fetch(`http://localhost:8090/carts/${cookieCartId}`);
+                    if (!response.ok) {
+                        throw new Error("Erreur lors du chargement du panier.");
+                    }
+                    const data = await response.json();
+
+                    // Mettre à jour le panier et le compteur
+                    setCart(data);
+                    updateCartItemCount(data.numberOfProducts || 0);
+                } else {
+                    // Créer un nouveau panier si aucun cartId n'est trouvé
+                    const response = await fetch("http://localhost:8090/carts", {method: "POST"});
+                    if (!response.ok) {
+                        throw new Error("Erreur lors de la création du panier.");
+                    }
+                    const newCart = await response.json();
+
+                    // Mettre à jour le panier et le compteur
+                    setCart(newCart);
+                    updateCartItemCount(newCart.numberOfProducts || 0);
+
+                    // Enregistrer le cartId dans les cookies
+                    document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`; // Cookie pour 7 jours
+                }
             } catch (error) {
-                console.error("Erreur lors du chargement du panier :", error);
+                console.error("Erreur lors du chargement/initialisation du panier :", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchCart();
-    }, [show, updateCartItemCount]);
+    }, [show, setCart, updateCartItemCount, cart]);
 
-
-
-
+    // Fonction pour mettre à jour la quantité d'un produit
     const updateQuantity = (idProduct, newQuantity) => {
+
         fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ quantity: newQuantity }),
+            body: JSON.stringify({quantity: newQuantity}),
         })
             .then((response) => {
                 if (!response.ok) {
@@ -87,12 +115,13 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
                 return response.json();
             })
             .then((updatedCart) => {
-                setCart(updatedCart); // Mettre à jour le panier avec les données renvoyées par l'API
+                setCart(updatedCart); // Mettre à jour le panier
                 updateCartItemCount(updatedCart.numberOfProducts); // Mettre à jour le compteur
             })
-            .catch((error) => console.error('Erreur lors de la mise à jour de la quantité:', error));
+            .catch((error) => console.error('Erreur lors de la mise à jour de la quantité :', error));
     };
 
+    // Fonction pour supprimer un produit du panier
     const removeFromCart = (idProduct) => {
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
             fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
@@ -102,18 +131,18 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
                     if (!response.ok) {
                         throw new Error('Erreur lors de la suppression du produit.');
                     }
-                    // Si le statut est 204, ne pas tenter de parser du JSON
                     if (response.status === 204) {
-                        return null; // Aucun contenu
+                        return null; // Aucun contenu si panier vide
                     }
                     return response.json();
                 })
+                // Mettre à jour le panier et le compteur
                 .then((updatedCart) => {
                     if (updatedCart) {
-                        setCart(updatedCart); // Mettre à jour l'état local si des données sont renvoyées
+                        setCart(updatedCart); // Mettre à jour le panier
                         updateCartItemCount(updatedCart.numberOfProducts); // Mettre à jour le compteur
                     } else {
-                        // Si le panier est vide
+                        // Si le panier est vide, réinitialiser le panier
                         setCart({
                             cartId: cart.cartId,
                             numberOfProducts: 0,
@@ -126,10 +155,7 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
                 .catch((error) => console.error('Erreur lors de la suppression :', error));
         }
     };
-
-
     if (!show) return null;
-
     return (
         <Card show={show} onHide={onHide} placement="start">
             <Card.Header>
@@ -140,7 +166,7 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
             <Card.Body>
                 {isLoading ? (
                     <div className="d-flex justify-content-center">
-                        <Spinner animation="border" />
+                        <Spinner animation="border"/>
                     </div>
                 ) : (
                     <>
@@ -230,4 +256,4 @@ function CartDrawer({ cartId, show, onHide, updateCartItemCount, setSelectedProd
     );
 }
 
-export default CartDrawer;
+export default React.memo(CartDrawer);
