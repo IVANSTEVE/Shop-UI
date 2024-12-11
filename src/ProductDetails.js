@@ -1,7 +1,7 @@
 import React from 'react';
 import useSWR from 'swr';
 import { Button, Card, Col, Row } from 'react-bootstrap';
-import {getCookie} from "./utils";
+import {getCartIdFromCookie} from "./utils";
 
 function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCount, setShowCart }) {
     const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -11,7 +11,24 @@ function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCou
     if (!data) return <div>Chargement...</div>;
     const addToCart = async () => {
         try {
-            const cartId = getCookie('cartId'); // Récupérer le cartId depuis le cookie
+            let cartId;
+
+            // Vérifier si l'utilisateur est connecté
+            const token = localStorage.getItem("token");
+            if (token) {
+                const userResponse = await fetch("http://localhost:8090/auth/me", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (userResponse.ok) {
+                    const user = await userResponse.json();
+                    cartId = user.cartId; // Prioriser le cartId de l'utilisateur connecté
+                }
+            }
+
+            // Si pas connecté, récupérer le cartId depuis les cookies
+            if (!cartId) {
+                cartId = getCartIdFromCookie();
+            }
 
             if (!cartId) {
                 throw new Error("Aucun panier existant. Veuillez actualiser la page.");
@@ -33,7 +50,6 @@ function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCou
             alert(`Produit ajouté au panier`);
             setCart(updatedCart);
             setCartItemCount(updatedCart.numberOfProducts || 0);
-            // Rediriger vers le panier
             setShowCart(true); // Affiche le panier
             setSelectedProduct(null);
         } catch (error) {
