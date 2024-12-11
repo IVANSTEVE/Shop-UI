@@ -2,92 +2,69 @@ import React, {useRef} from 'react';
 import {Card, Table, Form, Button, Spinner} from 'react-bootstrap';
 import './Card.css';
 import {useState, useEffect} from 'react';
+import {createCart, getCartIdFromCookie, isCookieConsentGiven} from "./utils";
 
-function CartDrawer({cart, setCart, show, onHide, updateCartItemCount, setSelectedProduct, setSelectedCategory}) {
+function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount, setSelectedProduct, setSelectedCategory}) {
     const [isLoading, setIsLoading] = useState(false);
     const fetchCalledOnce = useRef(false); // Drapeau pour empêcher la double exécution stricte
+    const token = localStorage.getItem("token");
+    const isLoggedIn = !!token;
+    const [cookiesAccepted, setCookiesAccepted] = useState(isCookieConsentGiven());
 
     // Utiliser un effet pour charger le panier une seule fois
     useEffect(() => {
-        // Fonction pour charger le panier
         const fetchCart = async () => {
-            // Si le panier n'est pas affiché, ne pas exécuter
-            if (!show) {
-                return;
+            // Vérifier le consentement aux cookies avant de charger le panier
+            if (!isCookieConsentGiven()) {
+                console.log("Consentement aux cookies non donné. Le panier ne sera pas chargé.");
+                return; // Ne pas charger le panier si les cookies ne sont pas acceptés
             }
-            // Si déjà exécuté, ne pas exécuter
-            if (fetchCalledOnce.current) {
+
+            // Si le panier n'est pas affiché ou déjà chargé, ne rien faire
+            if (!show || fetchCalledOnce.current) {
                 return;
             }
 
-            fetchCalledOnce.current = true; // Défini comme exécuté pour éviter les doubles appels
+            // Marquer le fetch comme appelé pour empêcher les appels multiples
+            fetchCalledOnce.current = true;
             setIsLoading(true);
 
-            // Fonction asynchrone pour charger le panier
             try {
-                // Récupérer les infos utilisateur
-                const authResponse = await fetch("http://localhost:8090/auth/me", {
-                    method: "GET",
-                    credentials: "include",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("token")}`, // Utiliser le token
-                    },
-                });
+                let cartId = null;
 
-                // Si l'utilisateur est connecté et a un panier
-                if (authResponse.ok) {
-                    const user = await authResponse.json();
+                // Si l'utilisateur est connecté récupère les informations de l'utilisateur
+                if (isLoggedIn) {
+                    const authResponse = await fetch("http://localhost:8090/auth/me", {
+                        method: "GET",
+                        credentials: "include",
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                    });
 
-                    if (user.cartId) {
-                        // Charger le panier de l'utilisateur
-                        const response = await fetch(`http://localhost:8090/carts/${user.cartId}`);
-                        if (!response.ok) {
-                            throw new Error("Erreur lors du chargement du panier utilisateur.");
-                        }
-                        const userCart = await response.json();
-
-                        // Mettre à jour le panier et le compteur
-                        setCart(userCart);
-                        updateCartItemCount(userCart.numberOfProducts || 0);
-                        return;
+                    // Si la réponse est OK, récupérer le cartId de l'utilisateur
+                    if (authResponse.ok) {
+                        const user = await authResponse.json();
+                        cartId = user.cartId;
                     }
                 }
 
-                // Si pas de cartId pour l'utilisateur ou requête échouée, utiliser le cookie
-
-                // Récupérer le cartId depuis les cookies
-                const cookieCartId = document.cookie
-                    .split("; ")
-                    .find((row) => row.startsWith("cartId="))
-                    ?.split("=")[1];
-
-                // Si un cartId est trouvé dans les cookies
-                if (cookieCartId) {
-                    // Charger le panier depuis le cookie
-                    const response = await fetch(`http://localhost:8090/carts/${cookieCartId}`);
-                    if (!response.ok) {
-                        throw new Error("Erreur lors du chargement du panier.");
-                    }
-                    const data = await response.json();
-
-                    // Mettre à jour le panier et le compteur
-                    setCart(data);
-                    updateCartItemCount(data.numberOfProducts || 0);
-                } else {
-                    // Créer un nouveau panier si aucun cartId n'est trouvé
-                    const response = await fetch("http://localhost:8090/carts", {method: "POST"});
-                    if (!response.ok) {
-                        throw new Error("Erreur lors de la création du panier.");
-                    }
-                    const newCart = await response.json();
-
-                    // Mettre à jour le panier et le compteur
-                    setCart(newCart);
-                    updateCartItemCount(newCart.numberOfProducts || 0);
-
-                    // Enregistrer le cartId dans les cookies
-                    document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`; // Cookie pour 7 jours
+                // Si non connecté, utiliser l'ID du cookie ou en créer un nouveau
+                if (!cartId) {
+                    cartId = getCartIdFromCookie() || (await createCart()).cartId;
                 }
+
+                // Charger le panier avec l'ID récupéré
+                const response = await fetch(`http://localhost:8090/carts/${cartId}`);
+                if (!response.ok) {
+                    throw new Error("Erreur lors du chargement du panier.");
+                }
+
+                const fetchedCart = await response.json();
+
+                // Mettre à jour le panier et le nombre d'articles
+                setCart(fetchedCart);
+                updateCartItemCount(fetchedCart.numberOfProducts || 0);
             } catch (error) {
                 console.error("Erreur lors du chargement/initialisation du panier :", error);
             } finally {
@@ -96,66 +73,105 @@ function CartDrawer({cart, setCart, show, onHide, updateCartItemCount, setSelect
         };
 
         fetchCart();
-    }, [show, setCart, updateCartItemCount, cart]);
+    }, [show, isLoggedIn, setCart, updateCartItemCount]);
 
     // Fonction pour mettre à jour la quantité d'un produit
-    const updateQuantity = (idProduct, newQuantity) => {
+    const updateQuantity = async (idProduct, newQuantity) => {
+        try {
 
-        fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({quantity: newQuantity}),
-        })
-            .then((response) => {
-                if (!response.ok) {
-                    throw new Error('Erreur lors de la mise à jour de la quantité.');
-                }
-                return response.json();
-            })
-            .then((updatedCart) => {
-                setCart(updatedCart); // Mettre à jour le panier
-                updateCartItemCount(updatedCart.numberOfProducts); // Mettre à jour le compteur
-            })
-            .catch((error) => console.error('Erreur lors de la mise à jour de la quantité :', error));
-    };
+            // Mettre à jour la quantité du produit dans le panier
+            const response = await fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity: newQuantity }),
+            });
 
-    // Fonction pour supprimer un produit du panier
-    const removeFromCart = (idProduct) => {
-        if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
-            fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
-                method: 'DELETE',
-            })
-                .then((response) => {
-                    if (!response.ok) {
-                        throw new Error('Erreur lors de la suppression du produit.');
-                    }
-                    if (response.status === 204) {
-                        return null; // Aucun contenu si panier vide
-                    }
-                    return response.json();
-                })
-                // Mettre à jour le panier et le compteur
-                .then((updatedCart) => {
-                    if (updatedCart) {
-                        setCart(updatedCart); // Mettre à jour le panier
-                        updateCartItemCount(updatedCart.numberOfProducts); // Mettre à jour le compteur
-                    } else {
-                        // Si le panier est vide, réinitialiser le panier
-                        setCart({
-                            cartId: cart.cartId,
-                            numberOfProducts: 0,
-                            cartProducts: [],
-                            cartTotalPrice: 0,
-                        });
-                        updateCartItemCount(0);
-                    }
-                })
-                .catch((error) => console.error('Erreur lors de la suppression :', error));
+            if (!response.ok) {
+                throw new Error('Erreur lors de la mise à jour de la quantité.');
+            }
+
+            // Mettre à jour l'etat du panier et le nombre d'articles
+            const updatedCart = await response.json();
+            setCart(updatedCart);
+            updateCartItemCount(updatedCart.numberOfProducts);
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour de la quantité :', error);
         }
     };
+
+    const removeFromCart = async (idProduct) => {
+
+        // Demander une confirmation avant de supprimer le produit
+        if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
+            try {
+                // Supprimer le produit du panier
+                const response = await fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
+                    method: 'DELETE',
+                });
+
+                if (!response.ok) {
+                    throw new Error('Erreur lors de la suppression du produit.');
+                }
+                // Si le statut est 204, le panier est vide, sinon mettre à jour le panier
+                if (response.status === 204) {
+                    setCart({
+                        cartId: cart.cartId,
+                        numberOfProducts: 0,
+                        cartProducts: [],
+                        cartTotalPrice: 0,
+                    });
+                    updateCartItemCount(0);
+                    return;
+                }
+
+                // Mettre à jour le panier et le nombre d'articles
+                const updatedCart = await response.json();
+                setCart(updatedCart);
+                updateCartItemCount(updatedCart.numberOfProducts);
+            } catch (error) {
+                console.error('Erreur lors de la suppression :', error);
+            }
+        }
+    };
+
+    // Fonction pour accepter les cookies
+    const handleAcceptCookies = () => {
+        // Définir le consentement des cookies sur vrai
+        document.cookie = "userCookieConsent=true; path=/; max-age=" + 365 * 24 * 60 * 60;
+        // Mettre à jour l'état des cookies acceptés
+        setCookiesAccepted(true);
+    };
+
+    // Ne pas afficher le panier si `show` est faux
     if (!show) return null;
+
+    // Affichage du message si les cookies sont refusés
+    if (!isLoggedIn && !cookiesAccepted) {
+        return (
+            <Card>
+                <Card.Header>
+                    <Card.Title className="text-center">Votre Panier</Card.Title>
+                </Card.Header>
+                <Card.Body>
+                    <div className="text-center">
+                        <p>
+                            La fonctionnalité du panier nécessite l'activation des cookies. Veuillez les accepter
+                            pour continuer.
+                        </p>
+                        {/* Bouton personnalisé pour accepter les cookies */}
+                        <Button
+                            variant="success"
+                            onClick={handleAcceptCookies} // Accepter les cookies et afficher le panier
+                        >
+                            Accepter les cookies
+                        </Button>
+                    </div>
+                </Card.Body>
+            </Card>
+        );
+    }
+
+    // Affichage du panier si les cookies sont acceptés
     return (
         <Card show={show} onHide={onHide} placement="start">
             <Card.Header>

@@ -13,14 +13,13 @@ import HomeScreen from './HomeScreen';
 import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
-import {getCartIdFromCookie} from './utils';
-import CookieConsent from 'react-cookie-consent';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import {createCart} from './utils';
+import CookieConsent, {getCookieConsentValue} from 'react-cookie-consent';
+import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import FaqText from './FaqText';
 import ContactText from './ContactText';
 import AboutText from './AboutText';
 import RGPDText from './RGPDText';
-
 
 
 const fetcher = async (url) => {
@@ -43,10 +42,11 @@ function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const {data: categories, error: categoriesError} = useSWR('http://localhost:8090/categories', fetcher);
-
+    const [cookiesAccepted, setCookiesAccepted] = useState(false);
     const [showCart, setShowCart] = useState(false);
     const [cartItemCount, setCartItemCount] = useState(0);
     const initialized = useRef(false);
+    const [showAuth, setShowAuth] = useState(false);
 
     // État du panier
     const [cart, setCartState] = useState({
@@ -70,32 +70,56 @@ function App() {
             if (initialized.current) return;
             initialized.current = true;
 
-            // Récupérer l'ID du panier depuis les cookies
-            let cartId = getCartIdFromCookie();
+            // Vérifier si l'utilisateur est connecté
+            const token = localStorage.getItem("token");
+            const isLoggedIn = !!token; // !! convertit la valeur en booléen (particularité liée à JS)
 
+            // Si l'utilisateur n'est pas connecté, vérifier que le consentement des cookies est donné
+            const consentValue = getCookieConsentValue();
+            if (!isLoggedIn && consentValue !== "true") {
+                return; // Aucun panier créé si l'utilisateur n'est pas connecté et n'a pas accepté les cookies
+            }
+
+
+            let cartId = null;
+
+            // Si l'utilisateur est connecté, récupérer l'ID du panier depuis l'utilisateur (auth)
+            if (isLoggedIn) {
+                try {
+                    // Récupérer les informations de l'utilisateur
+                    const authResponse = await fetch("http://localhost:8090/auth/me", {
+                        method: "GET",
+                        credentials: "include",
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    if (authResponse.ok) {
+                        const user = await authResponse.json();
+                        cartId = user.cartId; // Récupérer le cartId de l'utilisateur connecté
+                    }
+                } catch (error) {
+                    console.error("Erreur lors de la récupération des informations de l'utilisateur :", error);
+                }
+            }
+
+            // Si cartId existe, récupérer les données du panier
             if (cartId) {
                 try {
-                    console.log(`Chargement du panier avec l'ID : ${cartId}`);
                     const response = await fetch(`http://localhost:8090/carts/${cartId}`);
-                    if (!response.ok) {
-                        throw new Error("Erreur lors de la récupération du panier");
-                    }
-                    const data = await response.json();
-                    setCart(data);
-                    setCartItemCount(data.numberOfProducts || 0);
-                } catch (error) {
-                    console.error("Erreur lors de la récupération du panier :", error);
-                }
-            } else {
-                try {
-                    console.log("Aucun panier trouvé. Création d'un nouveau panier...");
-                    const response = await fetch("http://localhost:8090/carts", { method: "POST" });
                     if (!response.ok) {
                         throw new Error("Erreur lors de la création du panier");
                     }
+
+                    // Récupérer le panier créé
                     const newCart = await response.json();
+
+                    // Mettre à jour l'état du panier et le nombre d'articles
                     setCart(newCart);
                     setCartItemCount(0);
+
+                    // Créer un cookie avec l'ID du panier
                     document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`;
                 } catch (error) {
                     console.error("Erreur lors de la création du panier :", error);
@@ -107,9 +131,12 @@ function App() {
     }, [setCart]);
 
     const handleLogout = async () => {
+
         // Supprimer le token et l'utilisateur local
         localStorage.removeItem('token');
-        setUser(null); // Réinitialise l'utilisateur
+
+        // Réinitialiser l'état de l'utilisateur
+        setUser(null);
 
         // Réinitialiser l'état du panier
         setCart({
@@ -121,218 +148,233 @@ function App() {
             numberOfProducts: 0,
         });
 
-        setCartItemCount(0); // Mettre à jour le compteur du panier
+        // Réinitialiser le nombre d'articles
+        setCartItemCount(0);
 
-        // Supprimer le cookie du panier
-        document.cookie = 'cartId=; Max-Age=0; path=/'; // Supprime le cookie 'cartId'
+        // Supprimer le cookie cartId
+        document.cookie = 'cartId=; Max-Age=0; path=/';
+
+        // Vérifier si les cookies sont acceptés
+        if (cookiesAccepted) {
+            document.cookie = 'cartId=; Max-Age=0; path=/';
+        }
+
+        // Fermer le panier si les cookies ne sont pas acceptés
+        if (!cookiesAccepted) {
+            setShowAuth(false);
+            setShowCart(false);
+            return; // Ne pas créer de panier si les cookies ne sont pas acceptés
+        }
 
         //Recreer un panier
-        try {
-            console.log("Aucun panier trouvé. Création d'un nouveau panier...");
-            const response = await fetch("http://localhost:8090/carts", { method: "POST" });
-            if (!response.ok) {
-                throw new Error("Erreur lors de la création du panier");
-            }
-            const newCart = await response.json();
-            setCart(newCart);  // Met à jour l'état du panier
-            setCartItemCount(0);  // Remet à zéro le nombre d'articles
-            // Créer un nouveau cookie avec l'ID du panier
-            document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`; // 7 jours
-            console.log(`Nouveau panier créé avec l'ID : ${newCart.cartId}`);
-        } catch (error) {
-            console.error("Erreur lors de la création du panier :", error);
-        }
-        setShowAuth(false); // Ferme la fenêtre de connexion si elle est ouverte
-        setShowCart(false); // Ferme le panier si il est ouvert
+        const newCart = await createCart();
+
+        // Mettre à jour l'état du panier et le nombre d'articles
+        setCart(newCart);
+        setCartItemCount(0);
+
+        // Fermer le panier et le formulaire
+        setShowAuth(false);
+        setShowCart(false);
     };
 
-
+    // Fermer le formulaire d'authentification et réinitialiser la catégorie et le produit sélectionnés
     const toggleAuth = () => {
         setShowAuth(!showAuth);
-        setShowCart(false); // Fermer le panier si le formulaire est actif
-        setSelectedCategory(null); // Réinitialiser la catégorie sélectionnée
-        setSelectedProduct(null); // Réinitialiser le produit sélectionné
+        setShowCart(false);
+        setSelectedCategory(null);
+        setSelectedProduct(null);
     };
 
-    const toggleCart = useCallback(() => {
-        if (!showCart) {
-            setShowCart(!showCart);
-            setShowAuth(false);
-            setSelectedCategory(null);
-            setSelectedProduct(null);
-        }
-    }, [showCart]);
 
-    const [showAuth, setShowAuth] = useState(false);
+    // Fonction pour afficher ou masquer le panier
+    const toggleCart = useCallback(() => {
+        setShowCart((prevShowCart) => {
+            // Inverse l'état actuel de `showCart`
+            return !prevShowCart;
+        });
+
+        // Réinitialisation des autres états
+        setShowAuth(false);
+        setSelectedCategory(null);
+        setSelectedProduct(null);
+    }, []);
 
     return (
         <Router>
-        <div className="background">
-            {/* Header avec overlay pour l'image */}
-            <header
-                className="header-container"
-                style={{
-                    backgroundImage: `url(${headerview})`,
-                    height: '200px',
-                }}
-            >
-                <div className="header-overlay"></div>
-                <div className="header-content">
-                    <img src={logo} alt="Logo" className="logo"/>
-                    <h1 className="site-title">T-SHIRT SHOP</h1>
-                </div>
-            </header>
-            {/* Navbar centrée */}
-            <Navbar bg="dark" variant="dark" expand="lg" className="main-navbar">
-                <Container className="justify-content-center">
-                    <Navbar.Brand onClick={() => setSelectedCategory(null)}
-                                  style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
-                        <i className="bi bi-house-heart" style={{fontSize: '1.5rem', marginRight: '8px'}}></i>
-                        HOME
-                    </Navbar.Brand>
-                    <Navbar.Toggle aria-controls="basic-navbar-nav"/>
-                    <Navbar.Collapse id="basic-navbar-nav" className="justify-content-center">
-                        <Nav className="d-flex gap-3">
-                            {categoriesError ? (
-                                <Button variant="outline-light" disabled>Échec du chargement</Button>
-                            ) : !categories ? (
-                                <Button variant="outline-light" disabled>Chargement...</Button>
-                            ) : (
-                                categories.map((category) => (
-                                    <Button
-                                        key={category}
-                                        variant="outline-light"
-                                        onClick={() => {
-                                            setSelectedCategory(category.toLowerCase());
-                                            setSelectedProduct(null);
-                                            setShowAuth(false);
-                                            setShowCart(false);
-                                        }}
-                                    >
-                                        {categoryLabels[category]}
-                                    </Button>
-                                ))
-                            )}
-                            <Button
-                                variant="outline-light"
-                                style={{position: 'relative'}}
-                                onClick={toggleCart}
-                            >
-                                <i className="bi bi-cart-check" style={{fontSize: '1.0rem', marginRight: '2px'}}></i>
-                                Panier
-                                <span
-                                    className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+            <div className="background">
+                {/* Header avec overlay pour l'image */}
+                <header
+                    className="header-container"
+                    style={{
+                        backgroundImage: `url(${headerview})`,
+                        height: '200px',
+                    }}
+                >
+                    <div className="header-overlay"></div>
+                    <div className="header-content">
+                        <img src={logo} alt="Logo" className="logo"/>
+                        <h1 className="site-title">T-SHIRT SHOP</h1>
+                    </div>
+                </header>
+                {/* Navbar centrée */}
+                <Navbar bg="dark" variant="dark" expand="lg" className="main-navbar">
+                    <Container className="justify-content-center">
+                        <Navbar.Brand onClick={() => setSelectedCategory(null)}
+                                      style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
+                            <i className="bi bi-house-heart" style={{fontSize: '1.5rem', marginRight: '8px'}}></i>
+                            HOME
+                        </Navbar.Brand>
+                        <Navbar.Toggle aria-controls="basic-navbar-nav"/>
+                        <Navbar.Collapse id="basic-navbar-nav" className="justify-content-center">
+                            <Nav className="d-flex gap-3">
+                                {categoriesError ? (
+                                    <Button variant="outline-light" disabled>Échec du chargement</Button>
+                                ) : !categories ? (
+                                    <Button variant="outline-light" disabled>Chargement...</Button>
+                                ) : (
+                                    categories.map((category) => (
+                                        <Button
+                                            key={category}
+                                            variant="outline-light"
+                                            onClick={() => {
+                                                setSelectedCategory(category.toLowerCase());
+                                                setSelectedProduct(null);
+                                                setShowAuth(false);
+                                                setShowCart(false);
+                                            }}
+                                        >
+                                            {categoryLabels[category]}
+                                        </Button>
+                                    ))
+                                )}
+                                <Button
+                                    variant="outline-light"
+                                    style={{position: 'relative'}}
+                                    onClick={toggleCart}
+                                >
+                                    <i className="bi bi-cart-check"
+                                       style={{fontSize: '1.0rem', marginRight: '2px'}}></i>
+                                    Panier
+                                    <span
+                                        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                                     {cartItemCount}
-                                    <span className="visually-hidden">articles dans le panier</span>
+                                        <span className="visually-hidden">articles dans le panier</span>
                                 </span>
-                            </Button>
-                        </Nav>
-                        <Nav className="ms-auto">
-                            {user ? (
-                                <>
+                                </Button>
+                            </Nav>
+                            <Nav className="ms-auto">
+                                {user ? (
+                                    <>
             <span className="navbar-text text-light me-3">
                 Bienvenue, {user.userSurname} !
             </span>
-                                    <Button variant="outline-danger" onClick={handleLogout}>
-                                        Déconnexion
+                                        <Button variant="outline-danger" onClick={handleLogout}>
+                                            Déconnexion
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button variant="outline-light" onClick={toggleAuth}>
+                                        Connexion / Inscription
                                     </Button>
-                                </>
-                            ) : (
-                                <Button variant="outline-light" onClick={toggleAuth}>
-                                    Connexion / Inscription
-                                </Button>
-                            )}
-                        </Nav>
-                    </Navbar.Collapse>
-                </Container>
-            </Navbar>
-            {/* Affichage conditionnel des composants selon la sélection */}
-            <main className="content">
-                {showAuth && (
-                    <AuthForm
-                        onHide={() => setShowAuth(false)}
-                        setShowCart={setShowCart}
-                        setUser={setUser}
-                    />
-                )}
-                {!showAuth && showCart && (
-                    <CartDrawer
-                        cart={cart}
-                        setCart={setCart}
-                        show={showCart}
-                        onHide={() => setShowCart(false)}
-                        updateCartItemCount={(count) => setCartItemCount(count)}
-                        setSelectedProduct={setSelectedProduct}
-                        setSelectedCategory={setSelectedCategory}
-                    />
-                )}
-                {!showAuth && !showCart && selectedCategory && !selectedProduct && (
-                    <CategoryPage
-                        category={selectedCategory}
-                        setSelectedProduct={setSelectedProduct}
-                        fetcher={fetcher}
-                        categoryLabels={categoryLabels}
-                    />
-                )}
-                {!showAuth && !showCart && selectedProduct && (
-                    <ProductDetails
-                        productId={selectedProduct}
-                        setSelectedProduct={setSelectedProduct}
-                        fetcher={fetcher}
-                        cart={cart}
-                        setCart={setCart}
-                        showCart={showCart}
-                        setShowCart={setShowCart}
-                        setCartItemCount={setCartItemCount}
-                    />
-                )}
-                {!showAuth && !showCart && !selectedCategory && !selectedProduct && (
-                    <HomeScreen
-                        categories={categories}
-                        setSelectedCategory={setSelectedCategory}
-                        setSelectedProduct={setSelectedProduct}
-                        fetcher={fetcher}
-                    />
-                )}
-                <Routes>
-                    <Route path="/FaqText" element={<FaqText />} />
-                    <Route path="/ContactText" element={<ContactText />} />
-                    <Route path="/AboutText" element={<AboutText />} />
-                    <Route path="/RGPDText" element={<RGPDText />} />
-                </Routes>
-            </main>
-            <Footer/>
-            {/* Composant CookieConsent */}
-            <CookieConsent
-                location="bottom" // Position en bas de la page
-                buttonText="Accepter"
-                declineButtonText="Refuser"
-                enableDeclineButton // Active le bouton de refus
-                onAccept={() => console.log("Cookies acceptés")} // Action lors de l'acceptation
-                onDecline={() => console.log("Cookies refusés")} // Action lors du refus
-                cookieName="userCookieConsent" // Nom du cookie pour enregistrer la décision
-                style={{
-                    background: "#2B373B",
-                    color: "#ffffff",
-                    textAlign: "center"
-                }} // Style du container
-                buttonStyle={{
-                    background: "#4CAF50",
-                    color: "#ffffff",
-                    fontSize: "13px",
-                    borderRadius: "5px",
-                }} // Style du bouton d'acceptation
-                declineButtonStyle={{
-                    background: "#f44336",
-                    color: "#ffffff",
-                    fontSize: "13px",
-                    borderRadius: "5px",
-                }} // Style du bouton de refus
-            >
-                Nous utilisons des cookies pour améliorer votre expérience utilisateur. En acceptant, vous consentez à
-                notre utilisation des cookies.
-            </CookieConsent>
-        </div>
+                                )}
+                            </Nav>
+                        </Navbar.Collapse>
+                    </Container>
+                </Navbar>
+                {/* Affichage conditionnel des composants selon la sélection */}
+                <main className="content">
+                    {showAuth && (
+                        <AuthForm
+                            onHide={() => setShowAuth(false)}
+                            setShowCart={setShowCart}
+                            setUser={setUser}
+                        />
+                    )}
+                    {!showAuth && showCart && (
+                        <CartDrawer
+                            cart={cart}
+                            setCart={setCart}
+                            show={showCart}
+                            onHide={() => setShowCart(false)}
+                            updateCartItemCount={(count) => setCartItemCount(count)}
+                            setSelectedProduct={setSelectedProduct}
+                            setSelectedCategory={setSelectedCategory}
+                            cookiesAccepted={cookiesAccepted}
+                            setCookiesAccepted={setCookiesAccepted}
+                            setShowCart={setShowCart}
+                        />
+                    )}
+                    {!showAuth && !showCart && selectedCategory && !selectedProduct && (
+                        <CategoryPage
+                            category={selectedCategory}
+                            setSelectedProduct={setSelectedProduct}
+                            fetcher={fetcher}
+                            categoryLabels={categoryLabels}
+                        />
+                    )}
+                    {!showAuth && !showCart && selectedProduct && (
+                        <ProductDetails
+                            productId={selectedProduct}
+                            setSelectedProduct={setSelectedProduct}
+                            fetcher={fetcher}
+                            cart={cart}
+                            setCart={setCart}
+                            showCart={showCart}
+                            setShowCart={setShowCart}
+                            setCartItemCount={setCartItemCount}
+                            cookiesAccepted={cookiesAccepted}
+                            setCookiesAccepted={setCookiesAccepted}
+                        />
+                    )}
+                    {!showAuth && !showCart && !selectedCategory && !selectedProduct && (
+                        <HomeScreen
+                            categories={categories}
+                            setSelectedCategory={setSelectedCategory}
+                            setSelectedProduct={setSelectedProduct}
+                            fetcher={fetcher}
+                        />
+                    )}
+                    <Routes>
+                        <Route path="/FaqText" element={<FaqText/>}/>
+                        <Route path="/ContactText" element={<ContactText/>}/>
+                        <Route path="/AboutText" element={<AboutText/>}/>
+                        <Route path="/RGPDText" element={<RGPDText/>}/>
+                    </Routes>
+                </main>
+                <Footer/>
+                {/* Composant CookieConsent */}
+                <CookieConsent
+                    location="bottom"
+                    buttonText="Accepter"
+                    declineButtonText="Refuser"
+                    enableDeclineButton
+                    onAccept={() => console.log("Cookies acceptés")}
+                    onDecline={() => console.log("Cookies refusés")}
+                    cookieName="userCookieConsent"
+                    style={{
+                        background: "#2B373B",
+                        color: "#ffffff",
+                        textAlign: "center"
+                    }} // Style du container
+                    buttonStyle={{
+                        background: "#4CAF50",
+                        color: "#ffffff",
+                        fontSize: "13px",
+                        borderRadius: "5px",
+                    }} // Style du bouton d'acceptation
+                    declineButtonStyle={{
+                        background: "#f44336",
+                        color: "#ffffff",
+                        fontSize: "13px",
+                        borderRadius: "5px",
+                    }} // Style du bouton de refus
+                >
+                    Nous utilisons des cookies pour améliorer votre expérience utilisateur. En acceptant, vous consentez
+                    à
+                    notre utilisation des cookies.
+                </CookieConsent>
+            </div>
         </Router>
     );
 }
