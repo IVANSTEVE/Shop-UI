@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import './AuthForm.css';
 
-function AuthForm({ onHide, setUser }) {
+function AuthForm({ onHide, setUser, setShowCart }) {
     const [isLoginMode, setIsLoginMode] = useState(true);
+    const [error, setError] = useState(null);
+
+    // État local pour les données du formulaire
     const [formData, setFormData] = useState({
         userName: '',
         userSurname: '',
@@ -11,19 +14,39 @@ function AuthForm({ onHide, setUser }) {
         confirmPassword: '',
         address: '',
         city: '',
-        codePostal: '', // Nouveau champ
+        codePostal: '',
     });
 
-    const [error, setError] = useState(null);
+    // Réinitialiser les données du formulaire
+    const resetFormData = () => {
+        setFormData({
+            userName: '',
+            userSurname: '',
+            email: '',
+            password: '',
+            confirmPassword: '',
+            address: '',
+            city: '',
+            codePostal: '',
+        });
+        setError(null);
+    };
 
+    // Gérer les changements de formulaire
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    // Basculer entre les modes de connexion et d'inscription
+    const toggleMode = (mode) => {
+        setIsLoginMode(mode); // Change le mode
+        resetFormData(); // Réinitialise le formulaire
+    };
+
+    // Gérer l'inscription
     const handleRegister = async (e) => {
         e.preventDefault();
-
 
         // Validation JavaScript
         if (formData.password !== formData.confirmPassword) {
@@ -52,9 +75,11 @@ function AuthForm({ onHide, setUser }) {
             return;
         }
 
+        // Fetch API pour l'inscription
         try {
             const response = await fetch('http://localhost:8090/auth/register', {
                 method: 'POST',
+                credentials: 'include',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     userName: formData.userName,
@@ -73,7 +98,7 @@ function AuthForm({ onHide, setUser }) {
             }
 
             const data = await response.json();
-            localStorage.setItem('token', data.token); // Stocke le token
+            localStorage.setItem('token', data.token); // Stocke le token dans localStorage
 
             // Appeler immédiatement /me pour récupérer les infos utilisateur
             const userResponse = await fetch('http://localhost:8090/auth/me', {
@@ -94,6 +119,7 @@ function AuthForm({ onHide, setUser }) {
             }
     };
 
+    // Gérer la connexion
     const handleLogin = async (e) => {
         e.preventDefault(); // Empêche le rechargement de la page
 
@@ -109,6 +135,7 @@ function AuthForm({ onHide, setUser }) {
             // Étape 1 : Envoi de la requête de connexion
             const response = await fetch('http://localhost:8090/auth/login', {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     email: formData.email,
@@ -142,29 +169,19 @@ function AuthForm({ onHide, setUser }) {
                 // Étape 4 : Récupère les informations utilisateur et met à jour l'état
                 const userData = await userResponse.json();
                 setUser(userData); // Met à jour l'état utilisateur
+
+                // Ouvre directement le panier après la connexion si il contient des produits
+                if (userData.numberOfProductsInCart > 0) {
+                    setShowCart(true);
+                }
                 onHide(); // Ferme le formulaire d'authentification
             }
         } catch (err) {
             setError(err.message);
         }
     };
-    const resetFormData = () => {
-        setFormData({
-            userName: '',
-            userSurname: '',
-            email: '',
-            password: '',
-            confirmPassword: '',
-            address: '',
-            city: '',
-            codePostal: '',
-        });
-        setError(null);
-    };
-    const toggleMode = (mode) => {
-        setIsLoginMode(mode); // Change le mode
-        resetFormData(); // Réinitialise le formulaire
-    };
+
+
     return (
         <div className="auth-form-container">
             <div className="formWrapper">
