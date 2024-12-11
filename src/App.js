@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import {Navbar, Nav, Button, Container} from "react-bootstrap";
@@ -13,7 +13,7 @@ import HomeScreen from './HomeScreen';
 import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
-import {getCookie} from './utils';
+import {getCartIdFromCookie} from './utils';
 import CookieConsent from 'react-cookie-consent';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import FaqText from './FaqText';
@@ -43,25 +43,35 @@ function App() {
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const {data: categories, error: categoriesError} = useSWR('http://localhost:8090/categories', fetcher);
-    const [cart, setCart] = useState({
-        cartId: null, // ID du panier, par défaut null
-        userId: null, // Utilisateur lié, par défaut null
-        cartProducts: [], // Liste des produits, par défaut vide
-        cartTotalPrice: 0, // Prix total TTC, par défaut 0
-        cartTotalPriceExcludingVAT: 0, // Prix total HT, par défaut 0
-        numberOfProducts: 0, // Nombre total de produits, par défaut 0
-    });
+
     const [showCart, setShowCart] = useState(false);
-    const [cartItemCount, setCartItemCount] = useState(0); // Stocke le nombre d'articles
-    const initialized = useRef(false); // Utilisation de useRef pour stocker l’état mutable
+    const [cartItemCount, setCartItemCount] = useState(0);
+    const initialized = useRef(false);
 
+    // État du panier
+    const [cart, setCartState] = useState({
+        cartId: null,
+        userId: null,
+        cartProducts: [],
+        cartTotalPrice: 0,
+        cartTotalPriceExcludingVAT: 0,
+        numberOfProducts: 0,
+    });
 
+    // Utilisation du hook useCallback pour éviter les boucles infinies
+    const setCart = useCallback((newCart) => {
+        setCartState(newCart);
+    }, []);
+
+    // Initialisation du panier
     useEffect(() => {
         const initializeCart = async () => {
-            if (initialized.current) return; // Vérifie si l’état est déjà initialisé
-            initialized.current = true; // Marque comme initialisé
+            // Éviter de réinitialiser le panier à chaque rendu
+            if (initialized.current) return;
+            initialized.current = true;
 
-            let cartId = getCookie('cartId');
+            // Récupérer l'ID du panier depuis les cookies
+            let cartId = getCartIdFromCookie();
 
             if (cartId) {
                 try {
@@ -79,15 +89,14 @@ function App() {
             } else {
                 try {
                     console.log("Aucun panier trouvé. Création d'un nouveau panier...");
-                    const response = await fetch("http://localhost:8090/carts", {method: "POST"});
+                    const response = await fetch("http://localhost:8090/carts", { method: "POST" });
                     if (!response.ok) {
                         throw new Error("Erreur lors de la création du panier");
                     }
                     const newCart = await response.json();
                     setCart(newCart);
                     setCartItemCount(0);
-                    document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`; // 7 jours
-                    console.log(`Nouveau panier créé avec l'ID : ${newCart.cartId}`);
+                    document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`;
                 } catch (error) {
                     console.error("Erreur lors de la création du panier :", error);
                 }
@@ -95,29 +104,7 @@ function App() {
         };
 
         initializeCart();
-    }, []); // Pas de dépendances supplémentaires nécessaires
-
-    // Effet pour surveiller l'état utilisateur
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            const fetchUser = async () => {
-                try {
-                    const response = await fetch('http://localhost:8090/auth/me', {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-                    if (!response.ok) throw new Error("Utilisateur non authentifié");
-                    const userData = await response.json();
-                    setUser(userData);
-                } catch (error) {
-                    console.error(error);
-                    setUser(null);
-                }
-            };
-
-            fetchUser();
-        }
-    }, []); // Exécute seulement une fois au chargement de l'application
+    }, [setCart]);
 
     const handleLogout = async () => {
         // Supprimer le token et l'utilisateur local
@@ -167,12 +154,14 @@ function App() {
         setSelectedProduct(null); // Réinitialiser le produit sélectionné
     };
 
-    const toggleCart = () => {
-        setShowCart(!showCart);
-        setShowAuth(false); // Fermer le formulaire si le panier est actif
-        setSelectedCategory(null); // Réinitialiser la catégorie sélectionnée
-        setSelectedProduct(null); // Réinitialiser le produit sélectionné
-    };
+    const toggleCart = useCallback(() => {
+        if (!showCart) {
+            setShowCart(!showCart);
+            setShowAuth(false);
+            setSelectedCategory(null);
+            setSelectedProduct(null);
+        }
+    }, [showCart]);
 
     const [showAuth, setShowAuth] = useState(false);
 
@@ -262,12 +251,12 @@ function App() {
                 {showAuth && (
                     <AuthForm
                         onHide={() => setShowAuth(false)}
+                        setShowCart={setShowCart}
                         setUser={setUser}
                     />
                 )}
                 {!showAuth && showCart && (
                     <CartDrawer
-                        cartId={cart.cartId}
                         cart={cart}
                         setCart={setCart}
                         show={showCart}
