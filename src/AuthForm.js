@@ -110,6 +110,26 @@ function AuthForm({ onHide, setUser, setShowCart }) {
             }
 
             const userData = await userResponse.json();
+
+            //Créer un panier vide pour le nouvel utilisateur
+            const cartResponse = await fetch('http://localhost:8090/carts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${data.token}`,
+                },
+                body: JSON.stringify({
+                    userId: userData.userId, // Associer le panier au nouvel utilisateur
+                }),
+            });
+
+            if (!cartResponse.ok) {
+                throw new Error("Erreur lors de la création du panier pour l'utilisateur.");
+            }
+
+            const newCart = await cartResponse.json();
+            console.log("Panier créé :", newCart);
+
             setUser(userData); // Mettre à jour l'état utilisateur
             onHide(); // Fermer le formulaire
         }
