@@ -156,6 +156,9 @@ function App() {
         // Supprimer le cookie cartId
         document.cookie = 'cartId=; Max-Age=0; path=/';
 
+        // Vider le panier temporaire
+        setTempCart([]);
+
         // Vérifier si les cookies sont acceptés
         if (cookiesAccepted) {
             document.cookie = 'cartId=; Max-Age=0; path=/';
