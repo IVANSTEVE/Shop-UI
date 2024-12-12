@@ -53,12 +53,12 @@ function AuthForm({ onHide, setUser, setShowCart }) {
             setError("Les mots de passe ne correspondent pas");
             return;
         }
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-        if (!emailRegex.test(formData.email)) {
-            setError("Veuillez entrer une adresse email valide.");
-            return;
-        }
+        // const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        //
+        // if (!emailRegex.test(formData.email)) {
+        //     setError("Veuillez entrer une adresse email valide.");
+        //     return;
+        // }
         const nameRegex = /^[a-zA-Z]{3,}$/;
 
         if (!nameRegex.test(formData.userName)) {

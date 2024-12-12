@@ -3,20 +3,27 @@ import useSWR from 'swr';
 import { Button, Card, Col, Modal, Row } from 'react-bootstrap';
 import { getCartIdFromCookie, isCookieConsentGiven, setCookieConsent, createCart } from "./utils";
 
-function ProductDetails({ setCart, productId, setSelectedProduct, setCartItemCount, setShowCart }) {
+function ProductDetails({ setCart, setTempCart, productId, setSelectedProduct, setCartItemCount, setShowCart }) {
     const fetcher = (url) => fetch(url).then((res) => res.json());
     const { data, error } = useSWR(`http://localhost:8090/products/${productId}`, fetcher);
     const [showPopup, setShowPopup] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const token = localStorage.getItem("token");
     const isLoggedIn = !!token;
-
+    const addToCartTemp = () => {
+        setTempCart((prev) => [
+            ...prev,
+            { id: productId, name: data.productName, price: data.price, quantity: 1 },
+        ]);
+        setShowCart(true);
+    };
 
     const addToCart = async () => {
 
         // Si l'utilisateur n'est pas connecté ET le consentement est absent, affichez la popup
         if (!isLoggedIn && !isCookieConsentGiven()) {
-            setShowPopup(true);
+            addToCartTemp(); // Utiliser le panier temporaire
+            // setShowPopup(true);
             return;
         }
 

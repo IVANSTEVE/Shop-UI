@@ -47,6 +47,7 @@ function App() {
     const [cartItemCount, setCartItemCount] = useState(0);
     const initialized = useRef(false);
     const [showAuth, setShowAuth] = useState(false);
+    const [tempCart, setTempCart] = useState([]);
 
     // État du panier
     const [cart, setCartState] = useState({
@@ -77,6 +78,7 @@ function App() {
             // Si l'utilisateur n'est pas connecté, vérifier que le consentement des cookies est donné
             const consentValue = getCookieConsentValue();
             if (!isLoggedIn && consentValue !== "true") {
+                setTempCart([]); // Initialise un panier temporaire vide
                 return; // Aucun panier créé si l'utilisateur n'est pas connecté et n'a pas accepté les cookies
             }
 
@@ -303,6 +305,8 @@ function App() {
                             cookiesAccepted={cookiesAccepted}
                             setCookiesAccepted={setCookiesAccepted}
                             setShowCart={setShowCart}
+                            setTempCart={setTempCart}
+                            tempCart={tempCart}
                         />
                     )}
                     {!showAuth && !showCart && selectedCategory && !selectedProduct && (
@@ -325,6 +329,7 @@ function App() {
                             setCartItemCount={setCartItemCount}
                             cookiesAccepted={cookiesAccepted}
                             setCookiesAccepted={setCookiesAccepted}
+                            setTempCart={setTempCart}
                         />
                     )}
                     {!showAuth && !showCart && !selectedCategory && !selectedProduct && (

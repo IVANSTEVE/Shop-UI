@@ -4,20 +4,20 @@ import './Card.css';
 import {useState, useEffect} from 'react';
 import {createCart, getCartIdFromCookie, isCookieConsentGiven} from "./utils";
 
-function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount, setSelectedProduct, setSelectedCategory}) {
+function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCart, tempCart, setSelectedProduct, setSelectedCategory}) {
     const [isLoading, setIsLoading] = useState(false);
     const fetchCalledOnce = useRef(false); // Drapeau pour empêcher la double exécution stricte
     const token = localStorage.getItem("token");
     const isLoggedIn = !!token;
-    const [cookiesAccepted, setCookiesAccepted] = useState(isCookieConsentGiven());
 
     // Utiliser un effet pour charger le panier une seule fois
     useEffect(() => {
         const fetchCart = async () => {
-            // Vérifier le consentement aux cookies avant de charger le panier
-            if (!isCookieConsentGiven()) {
-                console.log("Consentement aux cookies non donné. Le panier ne sera pas chargé.");
-                return; // Ne pas charger le panier si les cookies ne sont pas acceptés
+            // Si les cookies ne sont pas acceptés ou l'utilisateur n'est pas connecté
+            if (!isLoggedIn && !isCookieConsentGiven()) {
+                console.log("Utilisation du panier temporaire.");
+                setIsLoading(false);
+                return;
             }
 
             // Si le panier n'est pas affiché ou déjà chargé, ne rien faire
@@ -77,27 +77,42 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount, setSelec
 
     // Fonction pour mettre à jour la quantité d'un produit
     const updateQuantity = async (idProduct, newQuantity) => {
-        try {
+        // Si utilisateur non connecté et cookies non acceptés
+        // Utilisation panier temporaire
+        if (!isLoggedIn && !isCookieConsentGiven()) {
+            setTempCart((prev) =>
+                prev.map((item) =>
+                    item.id === idProduct ? { ...item, quantity: newQuantity } : item
+                )
+            );
+            return;
+        }
 
-            // Mettre à jour la quantité du produit dans le panier
-            const response = await fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quantity: newQuantity }),
-            });
+        // Si utilisateur connecté ou cookies acceptés
+        // Mettre à jour côté serveur
+        if (isLoggedIn || isCookieConsentGiven()) {
+            try {
+                // Mettre à jour la quantité du produit dans le panier serveur
+                const response = await fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ quantity: newQuantity }),
+                });
 
-            if (!response.ok) {
-                throw new Error('Erreur lors de la mise à jour de la quantité.');
+                if (!response.ok) {
+                    throw new Error("Erreur lors de la mise à jour de la quantité.");
+                }
+
+                // Mettre à jour l'état du panier et le nombre d'articles
+                const updatedCart = await response.json();
+                setCart(updatedCart);
+                updateCartItemCount(updatedCart.numberOfProducts);
+            } catch (error) {
+                console.error("Erreur lors de la mise à jour de la quantité :", error);
             }
-
-            // Mettre à jour l'etat du panier et le nombre d'articles
-            const updatedCart = await response.json();
-            setCart(updatedCart);
-            updateCartItemCount(updatedCart.numberOfProducts);
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour de la quantité :', error);
         }
     };
+
 
     const removeFromCart = async (idProduct) => {
 
@@ -135,41 +150,112 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount, setSelec
     };
 
     // Fonction pour accepter les cookies
-    const handleAcceptCookies = () => {
-        // Définir le consentement des cookies sur vrai
-        document.cookie = "userCookieConsent=true; path=/; max-age=" + 365 * 24 * 60 * 60;
-        // Mettre à jour l'état des cookies acceptés
-        setCookiesAccepted(true);
+    // const handleAcceptCookies = () => {
+    //     // Définir le consentement des cookies sur vrai
+    //     document.cookie = "userCookieConsent=true; path=/; max-age=" + 365 * 24 * 60 * 60;
+    //     // Mettre à jour l'état des cookies acceptés
+    //     setCookiesAccepted(true);
+    // };
+    const removeFromTempCart = (index) => {
+        setTempCart(tempCart.filter((_, i) => i !== index));
     };
+    const updateTempCartQuantity = (index, newQuantity) => {
+        setTempCart((prev) =>
+            prev.map((item, i) => (i === index ? { ...item, quantity: newQuantity } : item))
+        );
+    };
+
 
     // Ne pas afficher le panier si `show` est faux
     if (!show) return null;
 
-    // Affichage du message si les cookies sont refusés
-    if (!isLoggedIn && !cookiesAccepted) {
+    if (!isLoggedIn && !isCookieConsentGiven()) {
         return (
             <Card>
                 <Card.Header>
-                    <Card.Title className="text-center">Votre Panier</Card.Title>
+                    <Card.Title className="text-center">Votre Panier (Temporaire)</Card.Title>
                 </Card.Header>
                 <Card.Body>
-                    <div className="text-center">
-                        <p>
-                            La fonctionnalité du panier nécessite l'activation des cookies. Veuillez les accepter
-                            pour continuer.
-                        </p>
-                        {/* Bouton personnalisé pour accepter les cookies */}
-                        <Button
-                            variant="success"
-                            onClick={handleAcceptCookies} // Accepter les cookies et afficher le panier
-                        >
-                            Accepter les cookies
-                        </Button>
-                    </div>
+                    <Table responsive striped bordered hover>
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Article</th>
+                            <th>Quantité</th>
+                            <th>Prix unitaire</th>
+                            <th>Total ligne</th>
+                            <th>Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {tempCart.length > 0 ? (
+                            tempCart.map((item, index) => (
+                                <tr key={index}>
+                                    <td>{index + 1}</td>
+                                    <td>{item.name}</td>
+                                    <td>
+                                        {/* Champ de sélection pour la quantité */}
+                                        <Form.Select
+                                            size="sm"
+                                            value={item.quantity}
+                                            onChange={(e) =>
+                                                updateTempCartQuantity(index, parseInt(e.target.value))
+                                            }
+                                        >
+                                            {[...Array(10).keys()].map((val) => (
+                                                <option key={val + 1} value={val + 1}>
+                                                    {val + 1}
+                                                </option>
+                                            ))}
+                                        </Form.Select>
+                                    </td>
+                                    <td>{item.price} €</td>
+                                    <td>{(item.quantity * item.price).toFixed(2)} €</td>
+                                    <td>
+                                        <Button variant="danger" onClick={() => removeFromTempCart(index)}>
+                                            Supprimer
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="6" className="text-center">Aucun produit dans le panier.</td>
+                            </tr>
+                        )}
+                        </tbody>
+                    </Table>
                 </Card.Body>
             </Card>
         );
     }
+
+
+    // Affichage du message si les cookies sont refusés
+    // if (!isLoggedIn && !cookiesAccepted) {
+    //     return (
+    //         <Card>
+    //             <Card.Header>
+    //                 <Card.Title className="text-center">Votre Panier</Card.Title>
+    //             </Card.Header>
+    //             <Card.Body>
+    //                 <div className="text-center">
+    //                     <p>
+    //                         La fonctionnalité du panier nécessite l'activation des cookies. Veuillez les accepter
+    //                         pour continuer.
+    //                     </p>
+    //                     {/* Bouton personnalisé pour accepter les cookies */}
+    //                     <Button
+    //                         variant="success"
+    //                         onClick={handleAcceptCookies} // Accepter les cookies et afficher le panier
+    //                     >
+    //                         Accepter les cookies
+    //                     </Button>
+    //                 </div>
+    //             </Card.Body>
+    //         </Card>
+    //     );
+    // }
 
     // Affichage du panier si les cookies sont acceptés
     return (
