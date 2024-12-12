@@ -13,14 +13,13 @@ import HomeScreen from './HomeScreen';
 import CategoryPage from './CategoryPage';
 import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
-import {createCart} from './utils';
+import {createCart, isCookieConsentGiven} from './utils';
 import CookieConsent, {getCookieConsentValue} from 'react-cookie-consent';
 import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import FaqText from './FaqText';
 import ContactText from './ContactText';
 import AboutText from './AboutText';
 import RGPDText from './RGPDText';
-
 
 const fetcher = async (url) => {
     const response = await fetch(url);
@@ -263,7 +262,10 @@ function App() {
                                     Panier
                                     <span
                                         className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    {cartItemCount}
+                                    {!isCookieConsentGiven()
+                                        ? tempCart.reduce((sum, item) => sum + item.quantity, 0)
+                                        : cartItemCount
+                                    }
                                         <span className="visually-hidden">articles dans le panier</span>
                                 </span>
                                 </Button>

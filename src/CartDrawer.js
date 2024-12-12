@@ -9,6 +9,8 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
     const fetchCalledOnce = useRef(false); // Drapeau pour empêcher la double exécution stricte
     const token = localStorage.getItem("token");
     const isLoggedIn = !!token;
+    const totalItemsTempCart = tempCart.reduce((sum, item) => sum + item.quantity, 0);
+    const totalPriceTempCart = tempCart.reduce((sum, item) => sum + item.quantity * item.price, 0);
 
     // Utiliser un effet pour charger le panier une seule fois
     useEffect(() => {
@@ -173,7 +175,7 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
         return (
             <Card>
                 <Card.Header>
-                    <Card.Title className="text-center">Votre Panier (Temporaire)</Card.Title>
+                    <Card.Title className="text-center">Votre Panier ({totalItemsTempCart} articles)</Card.Title>
                 </Card.Header>
                 <Card.Body>
                     <Table responsive striped bordered hover>
@@ -225,6 +227,19 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                         )}
                         </tbody>
                     </Table>
+                    <div className="mt-3 text-end">
+                        <h5>
+                            Total général (TVA 21% comprise): <strong>{totalPriceTempCart.toFixed(2)} €</strong>
+                        </h5>
+                    </div>
+                    <div className="d-flex justify-content-center mt-3 gap-5">
+                        <Button variant="danger" onClick={onHide}>
+                            Fermer le panier
+                        </Button>
+                        <Button variant="success" onClick={() => alert('Commande passée !')}>
+                            Passer commande
+                        </Button>
+                    </div>
                 </Card.Body>
             </Card>
         );
