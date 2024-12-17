@@ -62,16 +62,26 @@ function AuthForm({ onHide, setUser, setShowCart }) {
         const nameRegex = /^[a-zA-Z]{3,}$/;
 
         if (!nameRegex.test(formData.userName)) {
-            setError("Le nom doit contenir au moins 3 lettres.");
+            setError("Le nom ne doit contenir que des lettres, au moins 3.");
             return;
         }
 
         if (!nameRegex.test(formData.userSurname)) {
-            setError("Le prénom doit contenir au moins 3 lettres.");
+            setError("Le prénom doit contenir que des lettres, au moins 3.");
             return;
         }
         if (!/^\d{4}$/.test(formData.postalCode)) {
             setError("Le code postal doit contenir exactement 4 chiffres.");
+            return;
+        }
+
+        if (!/^[A-Za-z]+(?:[ -][A-Za-z]+)*,\s?\d{1,4}$/.test(formData.address)) {
+            setError("Veuillez entrer une adresse valide: rue nom et numero");
+            return;
+        }
+
+        if (!/^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ -][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/.test(formData.city)) {
+            setError("La ville ne peut contenir que des lettres .");
             return;
         }
 
@@ -292,7 +302,7 @@ function AuthForm({ onHide, setUser, setShowCart }) {
                                     type="text"
                                     name="address"
                                     className="form-control"
-                                    placeholder="Adresse"
+                                    placeholder="Adresse : Rue exemple, 123"
                                     required
                                     onChange={handleChange}
                                 />
@@ -308,7 +318,7 @@ function AuthForm({ onHide, setUser, setShowCart }) {
                                     type="text"
                                     name="postalCode"
                                     className="form-control"
-                                    placeholder="Code Postal"
+                                    placeholder="Code Postal : 1234"
                                     required
                                     pattern="\d{4}" // Validation pour un code postal de 4 chiffres
                                     title="Le code postal doit contenir exactement 4 chiffres."
