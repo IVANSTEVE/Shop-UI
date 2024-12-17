@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import useSWR from 'swr';
-import { Button, Card, Col, Modal, Row } from 'react-bootstrap';
+import { Button, Card, Col, Modal, Row, Form } from 'react-bootstrap';
 import { getCartIdFromCookie, isCookieConsentGiven, setCookieConsent, createCart } from "./utils";
 
 function ProductDetails({ setCart, setTempCart, productId, setSelectedProduct, setCartItemCount, setShowCart }) {
@@ -10,14 +10,26 @@ function ProductDetails({ setCart, setTempCart, productId, setSelectedProduct, s
     const [errorMessage, setErrorMessage] = useState("");
     const token = localStorage.getItem("token");
     const isLoggedIn = !!token;
+    const [selectedSize, setSelectedSize] = useState("");
     const addToCartTemp = () => {
+        if (!selectedSize) {
+            setErrorMessage("Veuillez sélectionner une taille."); // Assurez que la taille est sélectionnée
+            return;
+        }
+
         setTempCart((prev) => [
             ...prev,
-            { id: productId, name: data.productName, price: data.price, quantity: 1 },
+            {
+                id: productId,
+                name: data.productName, // Ajoutez le nom du produit
+                price: data.price,
+                quantity: 1,
+                size: selectedSize, // Ajoutez la taille sélectionnée
+                productName: data.productName // Ajoutez le nom du produit pour le lien
+            },
         ]);
         setShowCart(true);
     };
-
     const addToCart = async () => {
 
         // Si l'utilisateur n'est pas connecté ET le consentement est absent, affichez la popup
@@ -26,7 +38,10 @@ function ProductDetails({ setCart, setTempCart, productId, setSelectedProduct, s
             // setShowPopup(true);
             return;
         }
-
+        if (!selectedSize) {
+            setErrorMessage("Veuillez sélectionner une taille.");
+            return;
+        }
         try {
             let cartId;
 
@@ -50,20 +65,34 @@ function ProductDetails({ setCart, setTempCart, productId, setSelectedProduct, s
                 // Crée un panier si aucun n'existe
                 cartId = cookieCartId ? cookieCartId : (await createCart()).cartId;
             }
+            // Construire l'objet `size` attendu par le backend
+            const size = {
+                type: selectedSize.startsWith("SIZE_") ? "CHILD" : "ADULT", // Déterminer le type (enfant ou adulte)
+                adultSize: !selectedSize.startsWith("SIZE_") && (selectedSize === "XS" || selectedSize === "S" || selectedSize === "M" || selectedSize === "L" || selectedSize === "XL") ? selectedSize : null,
+                childSize: selectedSize.startsWith("SIZE_") ? selectedSize : null,
+            };
+            console.log("Selected size:", selectedSize);
+            console.log("Size object:", size);
 
             // Ajouter le produit au panier
-            const addProductResponse = await fetch(`http://localhost:8090/carts/products`, {
+            const response = await fetch(`http://localhost:8090/carts/products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cartId, productId: productId, quantity: 1 }),
+                body: JSON.stringify({
+                    cartId,
+                    productId,
+                    quantity: 1,
+                    size, // Inclure l'objet `size`
+                }),
             });
 
-            if (!addProductResponse.ok) {
+
+            if (!response.ok) {
                 throw new Error("Erreur lors de l'ajout du produit au panier.");
             }
 
             // Mettre à jour le panier et le nombre d'articles
-            const updatedCart = await addProductResponse.json();
+            const updatedCart = await response.json();
             setCart(updatedCart);
             setCartItemCount(updatedCart.numberOfProducts || 0);
 
@@ -117,13 +146,33 @@ function ProductDetails({ setCart, setTempCart, productId, setSelectedProduct, s
                     <Card.Body>
                         <Card.Text><strong>Marque :</strong> {data.brandName}</Card.Text>
                         <Card.Text>Prix : {data.price} €</Card.Text>
-                        <Button variant="primary" onClick={addToCart}>
-                            Ajouter au panier
-                        </Button>
-                        <Button variant="secondary" onClick={() => setSelectedProduct(null)}>
-                            Retour
-                        </Button>
-                        {errorMessage && <p style={{ color: "red", marginTop: "10px" }}>{errorMessage}</p>}
+                        <div>
+                            <Card.Text>
+                                <strong>Choisissez une taille :</strong>
+                            </Card.Text>
+                            <Form.Select
+                                value={selectedSize}
+                                onChange={(e) => setSelectedSize(e.target.value)}
+                            >
+                                <option value="">-- Sélectionnez une taille --</option>
+                                {data && ((data.adultSizes?.length > 0) || (data.childSizes?.length > 0)) ? (
+                                    [...(data.adultSizes || []), ...(data.childSizes?.map((size) => `SIZE_${size}`) || [])].map((size) => (
+                                        <option key={size} value={size}>
+                                            {size.startsWith("SIZE_") ? size.replace("SIZE_", "") : size} {/* Supprime le préfixe pour l'affichage */}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option disabled>Aucune taille disponible</option>
+                                )}
+                            </Form.Select>
+                        </div>
+                            <Button variant="primary" onClick={addToCart}>
+                                Ajouter au panier
+                            </Button>
+                            <Button variant="secondary" onClick={() => setSelectedProduct(null)}>
+                                Retour
+                            </Button>
+                            {errorMessage && <p style={{color: "red", marginTop: "10px"}}>{errorMessage}</p>}
                     </Card.Body>
                 </Card>
             </Col>
