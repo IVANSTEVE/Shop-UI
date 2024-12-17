@@ -223,7 +223,13 @@ function App() {
                 {/* Navbar centrée */}
                 <Navbar bg="dark" variant="dark" expand="lg" className="main-navbar">
                     <Container className="justify-content-center">
-                        <Navbar.Brand onClick={() => setSelectedCategory(null)}
+                        <Navbar.Brand
+                            onClick={() => {
+                                setSelectedCategory(null);
+                                setSelectedProduct(null);
+                                setShowAuth(false);
+                                setShowCart(false);
+                            }}
                                       style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
                             <i className="bi bi-house-heart" style={{fontSize: '1.5rem', marginRight: '8px'}}></i>
                             HOME
@@ -274,9 +280,9 @@ function App() {
                             <Nav className="ms-auto">
                                 {user ? (
                                     <>
-            <span className="navbar-text text-light me-3">
-                Bienvenue, {user.userSurname} !
-            </span>
+                                        <span className="navbar-text text-light me-3">
+                                            Bienvenue, {user.userSurname} !
+                                        </span>
                                         <Button variant="outline-danger" onClick={handleLogout}>
                                             Déconnexion
                                         </Button>
