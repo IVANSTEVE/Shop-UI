@@ -20,6 +20,7 @@ import FaqText from './FaqText';
 import ContactText from './ContactText';
 import AboutText from './AboutText';
 import RGPDText from './RGPDText';
+import UserPage from "./UserPage";
 
 const fetcher = async (url) => {
     const response = await fetch(url);
@@ -47,6 +48,8 @@ function App() {
     const initialized = useRef(false);
     const [showAuth, setShowAuth] = useState(false);
     const [tempCart, setTempCart] = useState([]);
+    const [showProfile, setShowProfile] = useState(false);
+
     // État du panier
     const [cart, setCartState] = useState({
         cartId: null,
@@ -131,7 +134,7 @@ function App() {
     }, [setCart]);
 
     const handleLogout = async () => {
-
+        setShowProfile(false);
         // Supprimer le token et l'utilisateur local
         localStorage.removeItem('token');
 
@@ -229,6 +232,7 @@ function App() {
                                 setSelectedProduct(null);
                                 setShowAuth(false);
                                 setShowCart(false);
+                                setShowProfile(false);
                             }}
                                       style={{cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
                             <i className="bi bi-house-heart" style={{fontSize: '1.5rem', marginRight: '8px'}}></i>
@@ -247,6 +251,7 @@ function App() {
                                             key={category}
                                             variant="outline-light"
                                             onClick={() => {
+                                                setShowProfile(false);
                                                 setSelectedCategory(category.toLowerCase());
                                                 setSelectedProduct(null);
                                                 setShowAuth(false);
@@ -283,6 +288,18 @@ function App() {
                                         <span className="navbar-text text-light me-3">
                                             Bienvenue, {user.userSurname} !
                                         </span>
+                                        <Button
+                                            variant="success"
+                                            onClick={() => {
+                                                setShowProfile(true);
+                                                setShowAuth(false);
+                                                setShowCart(false);
+                                                setSelectedCategory(null);
+                                                setSelectedProduct(null);
+                                            }}
+                                        >
+                                            Profil
+                                        </Button>
                                         <Button variant="outline-danger" onClick={handleLogout}>
                                             Déconnexion
                                         </Button>
@@ -344,7 +361,10 @@ function App() {
                             setTempCart={setTempCart}
                         />
                     )}
-                    {!showAuth && !showCart && !selectedCategory && !selectedProduct && (
+                    {!showAuth && !showCart && showProfile && (
+                        <UserPage user={user} />
+                    )}
+                    {!showAuth && !showCart && !showProfile && !selectedCategory && !selectedProduct && (
                         <HomeScreen
                             categories={categories}
                             setSelectedCategory={setSelectedCategory}
