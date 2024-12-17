@@ -15,11 +15,6 @@ import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
 import {createCart, isCookieConsentGiven} from './utils';
 import CookieConsent, {getCookieConsentValue} from 'react-cookie-consent';
-import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
-import FaqText from './FaqText';
-import ContactText from './ContactText';
-import AboutText from './AboutText';
-import RGPDText from './RGPDText';
 import UserPage from "./UserPage";
 
 const fetcher = async (url) => {
@@ -207,7 +202,6 @@ function App() {
     }, []);
 
     return (
-        <Router>
             <div className="background">
                 {/* Header avec overlay pour l'image */}
                 <header
@@ -372,12 +366,6 @@ function App() {
                             fetcher={fetcher}
                         />
                     )}
-                    <Routes>
-                        <Route path="/FaqText" element={<FaqText/>}/>
-                        <Route path="/ContactText" element={<ContactText/>}/>
-                        <Route path="/AboutText" element={<AboutText/>}/>
-                        <Route path="/RGPDText" element={<RGPDText/>}/>
-                    </Routes>
                 </main>
                 <Footer/>
                 {/* Composant CookieConsent */}
@@ -412,7 +400,6 @@ function App() {
                     notre utilisation des cookies.
                 </CookieConsent>
             </div>
-        </Router>
     );
 }
 
