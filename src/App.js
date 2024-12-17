@@ -47,7 +47,6 @@ function App() {
     const initialized = useRef(false);
     const [showAuth, setShowAuth] = useState(false);
     const [tempCart, setTempCart] = useState([]);
-
     // État du panier
     const [cart, setCartState] = useState({
         cartId: null,
@@ -262,9 +261,11 @@ function App() {
                                     Panier
                                     <span
                                         className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    {!isCookieConsentGiven()
-                                        ? tempCart.reduce((sum, item) => sum + item.quantity, 0)
-                                        : cartItemCount
+                                    {localStorage.getItem("token")
+                                        ? cartItemCount // Si un token existe, utilisez le panier utilisateur depuis le backend
+                                        : !isCookieConsentGiven()
+                                            ? tempCart.reduce((sum, item) => sum + item.quantity, 0) // Si pas de token et cookies refusés, utilisez tempCart
+                                            : cartItemCount // Sinon, utilisez le compteur global (cartItemCount)
                                     }
                                         <span className="visually-hidden">articles dans le panier</span>
                                 </span>
@@ -304,7 +305,7 @@ function App() {
                             setCart={setCart}
                             show={showCart}
                             onHide={() => setShowCart(false)}
-                            updateCartItemCount={(count) => setCartItemCount(count)}
+                            setCartItemCount={setCartItemCount}
                             setSelectedProduct={setSelectedProduct}
                             setSelectedCategory={setSelectedCategory}
                             cookiesAccepted={cookiesAccepted}
