@@ -4,7 +4,7 @@ import './Card.css';
 import {useState, useEffect} from 'react';
 import {createCart, getCartIdFromCookie, isCookieConsentGiven} from "./utils";
 
-function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCart, tempCart, setSelectedProduct, setSelectedCategory}) {
+function CartDrawer({cart, setCart, show, onHide,  setCartItemCount,setTempCart, tempCart, setSelectedProduct, setSelectedCategory}) {
     const [isLoading, setIsLoading] = useState(false);
     const fetchCalledOnce = useRef(false); // Drapeau pour empêcher la double exécution stricte
     const token = localStorage.getItem("token");
@@ -66,7 +66,7 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
 
                 // Mettre à jour le panier et le nombre d'articles
                 setCart(fetchedCart);
-                updateCartItemCount(fetchedCart.numberOfProducts || 0);
+                setCartItemCount(fetchedCart.numberOfProducts || 0);
             } catch (error) {
                 console.error("Erreur lors du chargement/initialisation du panier :", error);
             } finally {
@@ -75,31 +75,39 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
         };
 
         fetchCart();
-    }, [show, isLoggedIn, setCart, updateCartItemCount]);
+    }, [show, isLoggedIn, setCart, setCartItemCount]);
 
     // Fonction pour mettre à jour la quantité d'un produit
-    const updateQuantity = async (idProduct, newQuantity) => {
+    const updateQuantity = async (idProduct, newQuantity, size) => {
         // Si utilisateur non connecté et cookies non acceptés
-        // Utilisation panier temporaire
-        if (!isLoggedIn && !isCookieConsentGiven()) {
-            setTempCart((prev) =>
-                prev.map((item) =>
-                    item.id === idProduct ? { ...item, quantity: newQuantity } : item
-                )
-            );
-            return;
-        }
+        setTempCart((prev) =>
+            prev.map((item) =>
+                item.id === idProduct && item.size === size
+                    ? { ...item, quantity: newQuantity } // Mettre à jour la quantité si ID et taille correspondent
+                    : item
+            )
+        );
 
         // Si utilisateur connecté ou cookies acceptés
         // Mettre à jour côté serveur
         if (isLoggedIn || isCookieConsentGiven()) {
             try {
+
+                const sizeObject = {
+                    type: size.startsWith("SIZE_") ? "CHILD" : "ADULT",
+                    adultSize:!size.startsWith("SIZE_") && (size.includes("XS") || size.includes("S") || size.includes("M") || size.includes("L") || size.includes("XL")) ? size : null,
+                    childSize: size.startsWith("SIZE_") ? size : null,
+                };
+
                 // Mettre à jour la quantité du produit dans le panier serveur
-                const response = await fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ quantity: newQuantity }),
-                });
+                const response = await fetch(
+                    `http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`,
+                    {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ quantity: newQuantity, size: sizeObject }),
+                    }
+                );
 
                 if (!response.ok) {
                     throw new Error("Erreur lors de la mise à jour de la quantité.");
@@ -108,7 +116,7 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                 // Mettre à jour l'état du panier et le nombre d'articles
                 const updatedCart = await response.json();
                 setCart(updatedCart);
-                updateCartItemCount(updatedCart.numberOfProducts);
+                setCartItemCount(updatedCart.numberOfProducts);
             } catch (error) {
                 console.error("Erreur lors de la mise à jour de la quantité :", error);
             }
@@ -116,15 +124,49 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
     };
 
 
-    const removeFromCart = async (idProduct) => {
+    const removeFromCart = async (idProduct, size) => {
 
         // Demander une confirmation avant de supprimer le produit
         if (window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) {
             try {
-                // Supprimer le produit du panier
-                const response = await fetch(`http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`, {
-                    method: 'DELETE',
-                });
+                // Si utilisateur non connecté et cookies non acceptés
+                if (!isLoggedIn && !isCookieConsentGiven()) {
+                    console.log("Produit à supprimer :", { id: idProduct, size });
+                    console.log("tempCart avant suppression :", tempCart);
+
+                    // Mettre à jour `tempCart`
+                    setTempCart((prev) => {
+                        const updatedCart = prev.filter(
+                            (item) => !(item.id === idProduct && item.size === size)
+                        );
+                        console.log("tempCart après suppression :", updatedCart); // Log après filtrage
+                        return updatedCart;
+                    });
+
+                    return; // Arrêter ici pour éviter de continuer inutilement
+                }
+                const sizeObject = {
+                    type: size.startsWith("SIZE_") ? "CHILD" : "ADULT",
+                    adultSize:!size.startsWith("SIZE_") && (size.includes("XS") || size.includes("S") || size.includes("M") || size.includes("L") || size.includes("XL")) ? size : null,
+                    childSize: size.startsWith("SIZE_") ? size : null,
+                };
+
+                const requestPayload = {
+                    cartId: cart.cartId,
+                    productId: idProduct,
+                    size: sizeObject, // Correspond à l'objet `Size` dans AddToCartRequest
+                };
+
+                console.log("Payload envoyé :", JSON.stringify(requestPayload));
+
+                const response = await fetch(
+                    `http://localhost:8090/carts/${cart.cartId}/products/${idProduct}`,
+                    {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(requestPayload), // Passer AddToCartRequest
+                    }
+                );
 
                 if (!response.ok) {
                     throw new Error('Erreur lors de la suppression du produit.');
@@ -137,14 +179,14 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                         cartProducts: [],
                         cartTotalPrice: 0,
                     });
-                    updateCartItemCount(0);
+                    setCartItemCount(0);
                     return;
                 }
 
                 // Mettre à jour le panier et le nombre d'articles
                 const updatedCart = await response.json();
                 setCart(updatedCart);
-                updateCartItemCount(updatedCart.numberOfProducts);
+                setCartItemCount(updatedCart.numberOfProducts);
             } catch (error) {
                 console.error('Erreur lors de la suppression :', error);
             }
@@ -158,15 +200,6 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
     //     // Mettre à jour l'état des cookies acceptés
     //     setCookiesAccepted(true);
     // };
-    const removeFromTempCart = (index) => {
-        setTempCart(tempCart.filter((_, i) => i !== index));
-    };
-    const updateTempCartQuantity = (index, newQuantity) => {
-        setTempCart((prev) =>
-            prev.map((item, i) => (i === index ? { ...item, quantity: newQuantity } : item))
-        );
-    };
-
 
     // Ne pas afficher le panier si `show` est faux
     if (!show) return null;
@@ -183,6 +216,7 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                         <tr>
                             <th>#</th>
                             <th>Article</th>
+                            <th>Size</th>
                             <th>Quantité</th>
                             <th>Prix unitaire</th>
                             <th>Total ligne</th>
@@ -194,15 +228,25 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                             tempCart.map((item, index) => (
                                 <tr key={index}>
                                     <td>{index + 1}</td>
-                                    <td>{item.name}</td>
+                                    <td>
+                                        <Button
+                                            variant="link"
+                                            onClick={() => {
+                                                setSelectedProduct(item.productId); // Naviguer vers la page des détails
+                                                setSelectedCategory(null);
+                                                onHide(); // Fermer le panier
+                                            }}
+                                        >
+                                            {item.productName}
+                                        </Button>
+                                    </td>
+                                    <td>{item.size.startsWith("SIZE_") ? item.size.replace("SIZE_", "") : item.size}</td>
                                     <td>
                                         {/* Champ de sélection pour la quantité */}
                                         <Form.Select
                                             size="sm"
                                             value={item.quantity}
-                                            onChange={(e) =>
-                                                updateTempCartQuantity(index, parseInt(e.target.value))
-                                            }
+                                            onChange={(e) => updateQuantity(item.id, parseInt(e.target.value), item.size)} // Passer l'ID, la nouvelle quantité et la taille
                                         >
                                             {[...Array(10).keys()].map((val) => (
                                                 <option key={val + 1} value={val + 1}>
@@ -214,7 +258,10 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                                     <td>{item.price} €</td>
                                     <td>{(item.quantity * item.price).toFixed(2)} €</td>
                                     <td>
-                                        <Button variant="danger" onClick={() => removeFromTempCart(index)}>
+                                        <Button
+                                            variant="danger"
+                                            onClick={() => removeFromCart(item.id, item.size)} // Passer l'ID et la taille pour la suppression
+                                        >
                                             Supprimer
                                         </Button>
                                     </td>
@@ -222,7 +269,7 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="6" className="text-center">Aucun produit dans le panier.</td>
+                            <td colSpan="6" className="text-center">Aucun produit dans le panier.</td>
                             </tr>
                         )}
                         </tbody>
@@ -292,6 +339,7 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                             <tr>
                                 <th>#</th>
                                 <th>Article</th>
+                                <th>Taille</th>
                                 <th>Quantité</th>
                                 <th>Prix unitaire</th>
                                 <th>Total ligne</th>
@@ -315,12 +363,13 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                                                 {item.productName}
                                             </Button>
                                         </td>
+                                        <td>{item.size.startsWith("SIZE_") ? item.size.replace("SIZE_", "") : item.size}</td>
                                         <td>
                                             <Form.Select
                                                 size="sm"
                                                 value={item.quantity}
                                                 onChange={(e) =>
-                                                    updateQuantity(item.productId, parseInt(e.target.value))
+                                                    updateQuantity(item.productId, parseInt(e.target.value), item.size)
                                                 }
                                             >
                                                 {[...Array(10).keys()].map((val) => (
@@ -329,17 +378,18 @@ function CartDrawer({cart, setCart, show, onHide,  updateCartItemCount,setTempCa
                                                     </option>
                                                 ))}
                                             </Form.Select>
+
                                         </td>
                                         <td>{item.productUnitPrice.toFixed(2)} €</td>
                                         <td>{item.totalPrice.toFixed(2)} €</td>
                                         <td>
                                             <Button
                                                 variant="danger"
-                                                size="sm"
-                                                onClick={() => removeFromCart(item.productId)}
+                                                onClick={() => removeFromCart(item.productId, item.size)}
                                             >
                                                 Supprimer
                                             </Button>
+
                                         </td>
                                     </tr>
                                 ))
