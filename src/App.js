@@ -15,8 +15,8 @@ import ProductDetails from './ProductDetails';
 import AuthForm from './AuthForm';
 import {createCart, isCookieConsentGiven} from './utils';
 import CookieConsent, {getCookieConsentValue} from 'react-cookie-consent';
+import EditProfile from "./EditProfile";
 import UserPage from "./UserPage";
-
 const fetcher = async (url) => {
     const response = await fetch(url);
     if (!response.ok) {
@@ -24,14 +24,12 @@ const fetcher = async (url) => {
     }
     return response.json();
 };
-
 const categoryLabels = {
     MEN: "Hommes",
     WOMEN: "Femmes",
     GIRL: "Filles",
     BOY: "Garçons",
 };
-
 function App() {
     const [user, setUser] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -44,6 +42,10 @@ function App() {
     const [showAuth, setShowAuth] = useState(false);
     const [tempCart, setTempCart] = useState([]);
     const [showProfile, setShowProfile] = useState(false);
+    const handleSaveProfile = (updatedUser) => {
+        setUser(updatedUser);
+        setShowProfile(false); // Ferme le formulaire une fois les données mises à jour
+    };
 
     // État du panier
     const [cart, setCartState] = useState({
@@ -54,23 +56,19 @@ function App() {
         cartTotalPriceExcludingVAT: 0,
         numberOfProducts: 0,
     });
-
     // Utilisation du hook useCallback pour éviter les boucles infinies
     const setCart = useCallback((newCart) => {
         setCartState(newCart);
     }, []);
-
     // Initialisation du panier
     useEffect(() => {
         const initializeCart = async () => {
             // Éviter de réinitialiser le panier à chaque rendu
             if (initialized.current) return;
             initialized.current = true;
-
             // Vérifier si l'utilisateur est connecté
             const token = localStorage.getItem("token");
             const isLoggedIn = !!token; // !! convertit la valeur en booléen (particularité liée à JS)
-
             // Si l'utilisateur n'est pas connecté, vérifier que le consentement des cookies est donné
             const consentValue = getCookieConsentValue();
             if (!isLoggedIn && consentValue !== "true") {
@@ -78,9 +76,7 @@ function App() {
                 return; // Aucun panier créé si l'utilisateur n'est pas connecté et n'a pas accepté les cookies
             }
 
-
             let cartId = null;
-
             // Si l'utilisateur est connecté, récupérer l'ID du panier depuis l'utilisateur (auth)
             if (isLoggedIn) {
                 try {
@@ -92,7 +88,6 @@ function App() {
                             Authorization: `Bearer ${token}`,
                         },
                     });
-
                     if (authResponse.ok) {
                         const user = await authResponse.json();
                         cartId = user.cartId; // Récupérer le cartId de l'utilisateur connecté
@@ -101,7 +96,6 @@ function App() {
                     console.error("Erreur lors de la récupération des informations de l'utilisateur :", error);
                 }
             }
-
             // Si cartId existe, récupérer les données du panier
             if (cartId) {
                 try {
@@ -109,14 +103,11 @@ function App() {
                     if (!response.ok) {
                         throw new Error("Erreur lors de la création du panier");
                     }
-
                     // Récupérer le panier créé
                     const newCart = await response.json();
-
                     // Mettre à jour l'état du panier et le nombre d'articles
                     setCart(newCart);
                     setCartItemCount(0);
-
                     // Créer un cookie avec l'ID du panier
                     document.cookie = `cartId=${newCart.cartId};path=/;max-age=604800`;
                 } catch (error) {
@@ -124,18 +115,14 @@ function App() {
                 }
             }
         };
-
         initializeCart();
     }, [setCart]);
-
     const handleLogout = async () => {
         setShowProfile(false);
         // Supprimer le token et l'utilisateur local
         localStorage.removeItem('token');
-
         // Réinitialiser l'état de l'utilisateur
         setUser(null);
-
         // Réinitialiser l'état du panier
         setCart({
             cartId: null,
@@ -145,40 +132,31 @@ function App() {
             cartTotalPriceExcludingVAT: 0,
             numberOfProducts: 0,
         });
-
         // Réinitialiser le nombre d'articles
         setCartItemCount(0);
-
         // Supprimer le cookie cartId
         document.cookie = 'cartId=; Max-Age=0; path=/';
-
         // Vider le panier temporaire
         setTempCart([]);
-
         // Vérifier si les cookies sont acceptés
         if (cookiesAccepted) {
             document.cookie = 'cartId=; Max-Age=0; path=/';
         }
-
         // Fermer le panier si les cookies ne sont pas acceptés
         if (!cookiesAccepted) {
             setShowAuth(false);
             setShowCart(false);
             return; // Ne pas créer de panier si les cookies ne sont pas acceptés
         }
-
         //Recreer un panier
         const newCart = await createCart();
-
         // Mettre à jour l'état du panier et le nombre d'articles
         setCart(newCart);
         setCartItemCount(0);
-
         // Fermer le panier et le formulaire
         setShowAuth(false);
         setShowCart(false);
     };
-
     // Fermer le formulaire d'authentification et réinitialiser la catégorie et le produit sélectionnés
     const toggleAuth = () => {
         setShowAuth(!showAuth);
@@ -187,20 +165,17 @@ function App() {
         setSelectedProduct(null);
     };
 
-
     // Fonction pour afficher ou masquer le panier
     const toggleCart = useCallback(() => {
         setShowCart((prevShowCart) => {
             // Inverse l'état actuel de `showCart`
             return !prevShowCart;
         });
-
         // Réinitialisation des autres états
         setShowAuth(false);
         setSelectedCategory(null);
         setSelectedProduct(null);
     }, []);
-
     return (
             <div className="background">
                 {/* Header avec overlay pour l'image */}
@@ -356,7 +331,7 @@ function App() {
                         />
                     )}
                     {!showAuth && !showCart && showProfile && (
-                        <UserPage user={user} />
+                            <UserPage user={user} onSave={handleSaveProfile} />
                     )}
                     {!showAuth && !showCart && !showProfile && !selectedCategory && !selectedProduct && (
                         <HomeScreen
@@ -402,5 +377,4 @@ function App() {
             </div>
     );
 }
-
 export default App;
